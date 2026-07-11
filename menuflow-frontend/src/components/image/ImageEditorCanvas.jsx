@@ -27,7 +27,16 @@ function ImageEditorCanvas({ urlImage, actions, onDeplace, onRedimensionne, onSu
 
   return (
     <Box
-      sx={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}
+      sx={{
+        position: 'relative',
+        display: 'inline-block',
+        maxWidth: '100%',
+        borderRadius: 2,
+        overflow: 'hidden',
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'grey.50',
+      }}
       onMouseDown={() => setActionSelectionnee(null)}
     >
       <Box
@@ -36,7 +45,7 @@ function ImageEditorCanvas({ urlImage, actions, onDeplace, onRedimensionne, onSu
         src={urlImage}
         alt="édition"
         onLoad={recalculerEchelle}
-        sx={{ width: '100%', maxHeight: 400, display: 'block', border: '1px solid #eee' }}
+        sx={{ width: '100%', maxHeight: 420, display: 'block' }}
       />
       {actions.map((action) => (
         <ActionOverlay

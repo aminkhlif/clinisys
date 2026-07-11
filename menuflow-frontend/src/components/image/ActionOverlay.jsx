@@ -1,14 +1,14 @@
 // src/components/image/ActionOverlay.jsx
 import { useRef } from 'react';
 import { Box, IconButton } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
 import { CONFIG_ACTIONS } from './configActions.js';
 
 function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDeplace, onRedimensionne, onSupprime }) {
   const dragRef = useRef(null);
   const config = CONFIG_ACTIONS[action.type];
 
-const gererDebutDrag = (e) => {
+  const gererDebutDrag = (e) => {
     e.stopPropagation();
     onSelect();
     const xDepart = e.clientX;
@@ -88,7 +88,7 @@ const gererDebutDrag = (e) => {
         top: action.y * echelle,
         width: action.largeur * echelle,
         height: action.hauteur * echelle,
-        border: selectionnee ? '2px dashed #3B82F6' : '1px solid rgba(0,0,0,0.3)',
+        border: selectionnee ? '2px dashed #121212' : '1px solid rgba(0,0,0,0.25)',
         backgroundColor: estRectangleOuFocus ? 'transparent' : (action.type === 'FLOU' ? couleurFond : 'transparent'),
         outline: estRectangleOuFocus ? `3px solid ${couleurFond}` : 'none',
         borderRadius: estCurseur ? '50%' : 0,
@@ -114,9 +114,19 @@ const gererDebutDrag = (e) => {
           <IconButton
             size="small"
             onClick={(e) => { e.stopPropagation(); onSupprime(action.id); }}
-            sx={{ position: 'absolute', top: -16, right: -16, bgcolor: 'white', boxShadow: 1, width: 24, height: 24 }}
+            sx={{
+              position: 'absolute',
+              top: -16,
+              right: -16,
+              bgcolor: '#FFFFFF',
+              border: '1px solid',
+              borderColor: 'divider',
+              width: 24,
+              height: 24,
+              '&:hover': { bgcolor: 'grey.100' },
+            }}
           >
-            <DeleteIcon fontSize="small" color="error" />
+            <CloseIcon sx={{ fontSize: 14, color: 'grey.900' }} />
           </IconButton>
           <Box
             onMouseDown={gererDebutResize}
@@ -126,7 +136,7 @@ const gererDebutDrag = (e) => {
               right: -6,
               width: 14,
               height: 14,
-              bgcolor: '#3B82F6',
+              bgcolor: '#121212',
               border: '2px solid white',
               borderRadius: '50%',
               cursor: 'nwse-resize',

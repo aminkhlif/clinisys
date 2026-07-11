@@ -6,10 +6,12 @@ import {
 import {
   SortableContext, rectSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
+import { useSnackbar } from 'notistack';
 import ImageCard from './ImageCard.jsx';
 import axiosClient from '../../api/axiosClient.js';
 
 function ImageGrid({ images, selectionnees, onChangerSelection, onReordonne, onOuvrirDetail, onOuvrirActions }) {
+  const { enqueueSnackbar } = useSnackbar();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const basculerSelection = (imageId) => {
@@ -30,8 +32,13 @@ function ImageGrid({ images, selectionnees, onChangerSelection, onReordonne, onO
 
     onReordonne(nouvelOrdre);
 
-    const payload = nouvelOrdre.map((img, index) => ({ imageId: img.id, nouvelOrdre: index }));
-    await axiosClient.patch('/images/reordonner', payload);
+    try {
+      const payload = nouvelOrdre.map((img, index) => ({ imageId: img.id, nouvelOrdre: index }));
+      await axiosClient.patch('/images/reordonner', payload);
+    } catch {
+      enqueueSnackbar("Le réordonnancement n'a pas pu être enregistré", { variant: 'error' });
+      onReordonne(images);
+    }
   };
 
   return (
@@ -39,7 +46,7 @@ function ImageGrid({ images, selectionnees, onChangerSelection, onReordonne, onO
       <SortableContext items={images.map((img) => img.id)} strategy={rectSortingStrategy}>
         <Grid container spacing={2}>
           {images.map((image) => (
-            <Grid item xs={12} sm={6} md={4} lg={2.4} key={image.id}>
+            <Grid key={image.id} size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2.4 }}>
               <ImageCard
                 image={image}
                 selectionnee={selectionnees.includes(image.id)}

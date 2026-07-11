@@ -1,9 +1,14 @@
 // src/pages/SousMenuPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Stack, Typography, Button, TextField, InputAdornment } from '@mui/material';
+import {
+  Box, Stack, Typography, Button, TextField, InputAdornment, Chip, Skeleton,
+} from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import MovieCreationOutlinedIcon from '@mui/icons-material/MovieCreationOutlined';
+import { useSnackbar } from 'notistack';
 import axiosClient from '../api/axiosClient.js';
 import ImageGrid from '../components/image/ImageGrid.jsx';
 import ImageUploadDialog from '../components/image/ImageUploadDialog.jsx';
@@ -14,8 +19,10 @@ import ConfirmDialog from '../components/common/ConfirmDialog.jsx';
 
 function SousMenuPage() {
   const { sousMenuId } = useParams();
+  const { enqueueSnackbar } = useSnackbar();
   const [sousMenu, setSousMenu] = useState(null);
   const [images, setImages] = useState([]);
+  const [chargementImages, setChargementImages] = useState(true);
   const [selectionnees, setSelectionnees] = useState([]);
   const [recherche, setRecherche] = useState('');
 
@@ -23,16 +30,23 @@ function SousMenuPage() {
   const [imageDetail, setImageDetail] = useState(null);
   const [imageActions, setImageActions] = useState(null);
   const [diaporamaOuvert, setDiaporamaOuvert] = useState(false);
- const [confirmationSuppression, setConfirmationSuppression] = useState(false);
+  const [confirmationSuppression, setConfirmationSuppression] = useState(false);
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+
   const chargerSousMenu = async () => {
     const res = await axiosClient.get(`/sous-menus/${sousMenuId}`);
     setSousMenu(res.data);
   };
 
   const chargerImages = async (termeRecherche = '') => {
-    const params = termeRecherche ? { sousMenuId, description: termeRecherche } : { sousMenuId };
-    const res = await axiosClient.get('/images', { params });
-    setImages(res.data);
+    setChargementImages(true);
+    try {
+      const params = termeRecherche ? { sousMenuId, description: termeRecherche } : { sousMenuId };
+      const res = await axiosClient.get('/images', { params });
+      setImages(res.data);
+    } finally {
+      setChargementImages(false);
+    }
   };
 
   useEffect(() => {
@@ -50,95 +64,175 @@ function SousMenuPage() {
     return () => clearTimeout(delai);
   }, [recherche]);
 
- const confirmerSuppressionSelectionnees = async () => {
-    await axiosClient.delete('/images', { params: { ids: selectionnees }, paramsSerializer: { indexes: null } });
-    setSelectionnees([]);
-    setConfirmationSuppression(false);
-    chargerImages(recherche);
+  const confirmerSuppressionSelectionnees = async () => {
+    setSuppressionEnCours(true);
+    try {
+      await axiosClient.delete('/images', { params: { ids: selectionnees }, paramsSerializer: { indexes: null } });
+      setSelectionnees([]);
+      enqueueSnackbar(`${selectionnees.length} image(s) supprimée(s)`, { variant: 'success' });
+      chargerImages(recherche);
+    } catch {
+      enqueueSnackbar('La suppression a échoué', { variant: 'error' });
+    } finally {
+      setSuppressionEnCours(false);
+      setConfirmationSuppression(false);
+    }
   };
 
   const genererVideo = async () => {
-    await axiosClient.patch(`/sous-menus/${sousMenuId}/video`, null, { params: { genere: true } });
-    chargerSousMenu();
+    try {
+      await axiosClient.patch(`/sous-menus/${sousMenuId}/video`, null, { params: { genere: true } });
+      chargerSousMenu();
+      enqueueSnackbar('Vidéo générée', { variant: 'success' });
+    } catch {
+      enqueueSnackbar('La génération a échoué', { variant: 'error' });
+    }
   };
 
   const devaliderVideo = async () => {
-    await axiosClient.patch(`/sous-menus/${sousMenuId}/video`, null, { params: { genere: false } });
-    chargerSousMenu();
+    try {
+      await axiosClient.patch(`/sous-menus/${sousMenuId}/video`, null, { params: { genere: false } });
+      chargerSousMenu();
+      enqueueSnackbar('Vidéo dévalidée', { variant: 'success' });
+    } catch {
+      enqueueSnackbar("L'opération a échoué", { variant: 'error' });
+    }
   };
 
   if (!sousMenu) {
-    return <Typography>Chargement...</Typography>;
+    return (
+      <Box>
+        <Skeleton variant="text" width={240} height={40} sx={{ mb: 2 }} />
+        <Skeleton variant="rounded" height={44} width={350} sx={{ mb: 3 }} />
+        <Stack direction="row" flexWrap="wrap" gap={2}>
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} variant="rounded" width={200} height={180} />
+          ))}
+        </Stack>
+      </Box>
+    );
   }
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Stack direction="row" spacing={2}>
-          <Button variant="contained" onClick={() => setDialogUploadOuvert(true)}>
-            Ajouter une capture
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            disabled={selectionnees.length === 0}
-            onClick={() => setConfirmationSuppression(true)}
-          >
-            Supprimer sélectionnés
-          </Button>
-        </Stack>
+      {/* Niveau 1 — barre d'outils globale : recherche, aperçu, génération vidéo */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        alignItems={{ sm: 'center' }}
+        sx={{ mb: 2.5 }}
+      >
+        <TextField
+          size="small"
+          placeholder="Rechercher une image…"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{ width: { xs: '100%', sm: 320 } }}
+        />
 
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={1.5} sx={{ ml: { sm: 'auto' } }}>
           <Button
-            variant="outlined"
             startIcon={<PlayArrowIcon />}
+            variant="outlined"
             onClick={() => setDiaporamaOuvert(true)}
             disabled={images.length === 0}
           >
             Aperçu
           </Button>
-          <Button variant="contained" onClick={genererVideo} disabled={sousMenu.videoGeneree}>
-            Générer la vidéo
-          </Button>
-          <Button variant="contained" color="error" onClick={devaliderVideo} disabled={!sousMenu.videoGeneree}>
-            Dévalider la vidéo
-          </Button>
+          {sousMenu.videoGeneree ? (
+            <Button variant="outlined" onClick={devaliderVideo}>
+              Dévalider la vidéo
+            </Button>
+          ) : (
+            <Button
+              startIcon={<MovieCreationOutlinedIcon />}
+              variant="contained"
+              onClick={genererVideo}
+              disabled={images.length === 0}
+            >
+              Générer la vidéo
+            </Button>
+          )}
         </Stack>
       </Stack>
 
-      <Typography variant="h5" sx={{ mb: 2 }}>{sousMenu.nom}</Typography>
+      {/* Niveau 2 — titre et statut */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h5">{sousMenu.nom}</Typography>
+        <Chip
+          size="small"
+          label={sousMenu.videoGeneree ? 'Vidéo générée' : 'Vidéo non générée'}
+          sx={{ mt: 0.75 }}
+        />
+      </Box>
 
-      <TextField
-        size="small"
-        placeholder="Rechercher une image par description..."
-        value={recherche}
-        onChange={(e) => setRecherche(e.target.value)}
-        slotProps={{
-  input: {
-    startAdornment: (
-      <InputAdornment position="start">
-        <SearchIcon fontSize="small" />
-      </InputAdornment>
-    ),
-  },
-}}
-        sx={{ mb: 2, width: 350 }}
-      />
+      {/* Niveau 3 — actions sur la sélection d'images */}
+      <Stack direction="row" spacing={1.5} sx={{ mb: 3 }}>
+        <Button
+          startIcon={<AddPhotoAlternateIcon />}
+          variant="contained"
+          onClick={() => setDialogUploadOuvert(true)}
+        >
+          Ajouter une capture
+        </Button>
+        <Button
+          variant="outlined"
+          disabled={selectionnees.length === 0}
+          onClick={() => setConfirmationSuppression(true)}
+        >
+          Supprimer ({selectionnees.length})
+        </Button>
+      </Stack>
 
-      <ImageGrid
-        images={images}
-        selectionnees={selectionnees}
-        onChangerSelection={setSelectionnees}
-        onReordonne={setImages}
-        onOuvrirDetail={setImageDetail}
-        onOuvrirActions={setImageActions}
-      />
+      {chargementImages ? (
+        <Stack direction="row" flexWrap="wrap" gap={2}>
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} variant="rounded" width={200} height={180} />
+          ))}
+        </Stack>
+      ) : images.length === 0 ? (
+        <Box
+          sx={{
+            border: '1px dashed',
+            borderColor: 'divider',
+            borderRadius: 3,
+            py: 8,
+            textAlign: 'center',
+          }}
+        >
+          <Typography sx={{ color: 'text.secondary' }}>
+            {recherche ? 'Aucune image ne correspond à cette recherche' : 'Aucune capture pour le moment'}
+          </Typography>
+        </Box>
+      ) : (
+        <ImageGrid
+          images={images}
+          selectionnees={selectionnees}
+          onChangerSelection={setSelectionnees}
+          onReordonne={setImages}
+          onOuvrirDetail={setImageDetail}
+          onOuvrirActions={setImageActions}
+        />
+      )}
 
       <ImageUploadDialog
         ouvert={dialogUploadOuvert}
         sousMenuId={sousMenuId}
         onFermer={() => setDialogUploadOuvert(false)}
-        onSauvegarde={() => { setDialogUploadOuvert(false); chargerImages(recherche); }}
+        onSauvegarde={() => {
+          setDialogUploadOuvert(false);
+          chargerImages(recherche);
+          enqueueSnackbar('Capture ajoutée', { variant: 'success' });
+        }}
       />
 
       <ImageDetailDialog
@@ -165,6 +259,7 @@ function SousMenuPage() {
         message={`${selectionnees.length} image(s) seront supprimées définitivement.`}
         onConfirmer={confirmerSuppressionSelectionnees}
         onAnnuler={() => setConfirmationSuppression(false)}
+        enCours={suppressionEnCours}
       />
     </Box>
   );

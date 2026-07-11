@@ -6,6 +6,7 @@ import axiosClient from '../../api/axiosClient.js';
 function SousMenuFormDialog({ ouvert, sousMenu, menuId, onFermer, onSauvegarde }) {
   const [nom, setNom] = useState('');
   const [erreur, setErreur] = useState('');
+  const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
     setNom(sousMenu ? sousMenu.nom : '');
@@ -13,6 +14,11 @@ function SousMenuFormDialog({ ouvert, sousMenu, menuId, onFermer, onSauvegarde }
   }, [sousMenu, ouvert]);
 
   const sauvegarder = async () => {
+    if (!nom.trim()) {
+      setErreur('Le nom est obligatoire');
+      return;
+    }
+    setEnCours(true);
     try {
       if (sousMenu) {
         await axiosClient.put(`/sous-menus/${sousMenu.id}`, { nom, menuId });
@@ -21,11 +27,9 @@ function SousMenuFormDialog({ ouvert, sousMenu, menuId, onFermer, onSauvegarde }
       }
       onSauvegarde();
     } catch (err) {
-      if (err.response?.data?.nom) {
-        setErreur(err.response.data.nom);
-      } else {
-        setErreur('Une erreur est survenue');
-      }
+      setErreur(err.response?.data?.nom || 'Une erreur est survenue');
+    } finally {
+      setEnCours(false);
     }
   };
 
@@ -40,13 +44,16 @@ function SousMenuFormDialog({ ouvert, sousMenu, menuId, onFermer, onSauvegarde }
           label="Nom du sous-menu"
           value={nom}
           onChange={(e) => setNom(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && sauvegarder()}
           error={Boolean(erreur)}
           helperText={erreur}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onFermer}>Annuler</Button>
-        <Button variant="contained" onClick={sauvegarder}>Enregistrer</Button>
+        <Button onClick={onFermer} disabled={enCours}>Annuler</Button>
+        <Button variant="contained" onClick={sauvegarder} disabled={enCours}>
+          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+        </Button>
       </DialogActions>
     </Dialog>
   );

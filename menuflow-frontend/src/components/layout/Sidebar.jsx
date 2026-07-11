@@ -1,20 +1,23 @@
 // src/components/layout/Sidebar.jsx
 import { useEffect, useState } from 'react';
 import {
-  Box, TextField, InputAdornment, List, Button, Stack, Typography
+  Box, TextField, InputAdornment, List, Button, Stack, Typography, Skeleton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 import axiosClient from '../../api/axiosClient.js';
 import MenuFormDialog from '../menu/MenuFormDialog.jsx';
 import SousMenuFormDialog from '../sousMenu/SousMenuFormDialog.jsx';
 import MenuItem from '../menu/MenuItem.jsx';
 import ConfirmDialog from '../common/ConfirmDialog.jsx';
+
 function Sidebar() {
+  const { enqueueSnackbar } = useSnackbar();
   const [confirmation, setConfirmation] = useState(null);
-  // confirmation = { type: 'menu' | 'sousMenu', cible: menu|sousMenu } ou null
   const [menus, setMenus] = useState([]);
+  const [chargementMenus, setChargementMenus] = useState(true);
   const [sousMenusParMenu, setSousMenusParMenu] = useState({});
   const [menusOuverts, setMenusOuverts] = useState({});
   const [recherche, setRecherche] = useState('');
@@ -30,14 +33,24 @@ function Sidebar() {
   const { sousMenuId } = useParams();
 
   const chargerMenus = async (termeRecherche = '') => {
-    const params = termeRecherche ? { recherche: termeRecherche } : {};
-    const res = await axiosClient.get('/menus', { params });
-    setMenus(res.data);
+    try {
+      const params = termeRecherche ? { recherche: termeRecherche } : {};
+      const res = await axiosClient.get('/menus', { params });
+      setMenus(res.data);
+    } catch {
+      enqueueSnackbar('Impossible de charger les menus', { variant: 'error' });
+    } finally {
+      setChargementMenus(false);
+    }
   };
 
   const chargerSousMenus = async (menuId) => {
-    const res = await axiosClient.get('/sous-menus', { params: { menuId } });
-    setSousMenusParMenu((prev) => ({ ...prev, [menuId]: res.data }));
+    try {
+      const res = await axiosClient.get('/sous-menus', { params: { menuId } });
+      setSousMenusParMenu((prev) => ({ ...prev, [menuId]: res.data }));
+    } catch {
+      enqueueSnackbar('Impossible de charger les sous-menus', { variant: 'error' });
+    }
   };
 
   useEffect(() => {
@@ -60,18 +73,25 @@ function Sidebar() {
   };
 
   const confirmerSuppression = async () => {
-    if (confirmation.type === 'menu') {
-      await axiosClient.delete(`/menus/${confirmation.cible.id}`);
-      chargerMenus(recherche);
-    } else if (confirmation.type === 'sousMenu') {
-      const sousMenu = confirmation.cible;
-      await axiosClient.delete(`/sous-menus/${sousMenu.id}`);
-      chargerSousMenus(sousMenu.menuId);
-      if (sousMenuId === String(sousMenu.id)) {
-        navigate('/');
+    try {
+      if (confirmation.type === 'menu') {
+        await axiosClient.delete(`/menus/${confirmation.cible.id}`);
+        chargerMenus(recherche);
+        enqueueSnackbar('Menu supprimé', { variant: 'success' });
+      } else if (confirmation.type === 'sousMenu') {
+        const sousMenu = confirmation.cible;
+        await axiosClient.delete(`/sous-menus/${sousMenu.id}`);
+        chargerSousMenus(sousMenu.menuId);
+        if (sousMenuId === String(sousMenu.id)) {
+          navigate('/');
+        }
+        enqueueSnackbar('Sous-menu supprimé', { variant: 'success' });
       }
+    } catch {
+      enqueueSnackbar('La suppression a échoué', { variant: 'error' });
+    } finally {
+      setConfirmation(null);
     }
-    setConfirmation(null);
   };
 
   const ouvrirCreationMenu = () => {
@@ -87,7 +107,6 @@ function Sidebar() {
   const demanderSuppressionMenu = (menu) => {
     setConfirmation({ type: 'menu', cible: menu });
   };
-
 
   const ouvrirCreationSousMenu = (menuId) => {
     setSousMenuEnEdition(null);
@@ -108,65 +127,121 @@ function Sidebar() {
   const apresSauvegardeMenu = () => {
     setDialogMenuOuvert(false);
     chargerMenus(recherche);
+    enqueueSnackbar(menuEnEdition ? 'Menu mis à jour' : 'Menu créé', { variant: 'success' });
   };
 
   const apresSauvegardeSousMenu = () => {
     setDialogSousMenuOuvert(false);
     chargerSousMenus(menuParentPourAjout);
+    enqueueSnackbar(sousMenuEnEdition ? 'Sous-menu mis à jour' : 'Sous-menu créé', { variant: 'success' });
   };
 
   return (
-    
-    <Box sx={{ p: 2 }}>
-      <Box sx={{ py: 3, px: 2, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', mb: 2 }}>
-        <Typography variant="h6" sx={{ color: '#FFFFFF', fontWeight: 700, letterSpacing: 1 }}>
-          MENUFLOW
-        </Typography>
+    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ py: 3, px: 1, mb: 1, display: 'flex', justifyContent: 'center' }}>
+        <Box
+          component="svg"
+          viewBox="0 0 32 32"
+          sx={{ width: 40, height: 40 }}
+        >
+          <rect x="3" y="3" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.95" />
+          <rect
+            x="17" y="3" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.55"
+          >
+            <animate attributeName="opacity" values="0.35;0.85;0.35" dur="3.2s" repeatCount="indefinite" />
+          </rect>
+          <rect
+            x="3" y="17" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.55"
+          >
+            <animate attributeName="opacity" values="0.85;0.35;0.85" dur="3.2s" repeatCount="indefinite" />
+          </rect>
+          <rect x="17" y="17" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.95" />
+        </Box>
       </Box>
-      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <TextField sx={{
-  '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white', borderRadius: 2 },
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-}}
-          size="small"
-          placeholder="Rechercher un menu..."
-          value={recherche}
-          onChange={(e) => setRecherche(e.target.value)}
-         slotProps={{
-  input: {
-    startAdornment: (
-      <InputAdornment position="start">
-        <SearchIcon fontSize="small" />
-      </InputAdornment>
-    ),
-  },
-}}
-          fullWidth
-        />
-      </Stack>
 
-      <Button startIcon={<AddIcon />} variant="contained" fullWidth onClick={ouvrirCreationMenu} sx={{ mb: 2 }}>
+      <TextField
+        sx={{
+          mb: 1.5,
+          '& .MuiOutlinedInput-root': {
+            bgcolor: 'rgba(255,255,255,0.06)',
+            color: 'white',
+            borderRadius: 2,
+            fontSize: '0.875rem',
+          },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.12)' },
+          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.24)' },
+          '& .Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
+        }}
+        size="small"
+        placeholder="Rechercher un menu…"
+        value={recherche}
+        onChange={(e) => setRecherche(e.target.value)}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} />
+              </InputAdornment>
+            ),
+          },
+        }}
+        fullWidth
+      />
+
+      <Button
+        startIcon={<AddIcon />}
+        variant="contained"
+        fullWidth
+        onClick={ouvrirCreationMenu}
+        sx={{
+          mb: 2,
+          bgcolor: 'rgba(255,255,255,0.1)',
+          color: '#FFFFFF',
+          '&:hover': { bgcolor: 'rgba(255,255,255,0.16)' },
+        }}
+      >
         Nouveau menu
       </Button>
 
-      <List dense>
-        {menus.map((menu) => (
-          <MenuItem
-            key={menu.id}
-            menu={menu}
-            ouvert={Boolean(menusOuverts[menu.id])}
-            sousMenus={sousMenusParMenu[menu.id] || []}
-            sousMenuIdActif={sousMenuId}
-            onToggle={() => basculerMenu(menu.id)}
-            onEdit={ouvrirEditionMenu}
-            onDelete={demanderSuppressionMenu}
-            onAjouterSousMenu={ouvrirCreationSousMenu}
-            onEditSousMenu={ouvrirEditionSousMenu}
-            onDeleteSousMenu={demanderSuppressionSousMenu}
-            onSelectSousMenu={(id) => navigate(`/sous-menus/${id}`)}
-          />
-        ))}
-      </List>
+      <Box sx={{ flex: 1, overflowY: 'auto', mx: -1 }}>
+        {chargementMenus ? (
+          <Stack spacing={1} sx={{ px: 1 }}>
+            {[...Array(4)].map((_, i) => (
+              <Skeleton
+                key={i}
+                variant="rounded"
+                height={40}
+                sx={{ bgcolor: 'rgba(255,255,255,0.06)', borderRadius: 2 }}
+              />
+            ))}
+          </Stack>
+        ) : menus.length === 0 ? (
+          <Box sx={{ px: 2, py: 4, textAlign: 'center' }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+              {recherche ? 'Aucun menu ne correspond' : 'Aucun menu pour le moment'}
+            </Typography>
+          </Box>
+        ) : (
+          <List dense sx={{ px: 1 }}>
+            {menus.map((menu) => (
+              <MenuItem
+                key={menu.id}
+                menu={menu}
+                ouvert={Boolean(menusOuverts[menu.id])}
+                sousMenus={sousMenusParMenu[menu.id] || []}
+                sousMenuIdActif={sousMenuId}
+                onToggle={() => basculerMenu(menu.id)}
+                onEdit={ouvrirEditionMenu}
+                onDelete={demanderSuppressionMenu}
+                onAjouterSousMenu={ouvrirCreationSousMenu}
+                onEditSousMenu={ouvrirEditionSousMenu}
+                onDeleteSousMenu={demanderSuppressionSousMenu}
+                onSelectSousMenu={(id) => navigate(`/sous-menus/${id}`)}
+              />
+            ))}
+          </List>
+        )}
+      </Box>
 
       <MenuFormDialog
         ouvert={dialogMenuOuvert}

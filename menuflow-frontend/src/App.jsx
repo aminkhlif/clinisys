@@ -1,13 +1,28 @@
 // src/App.jsx
 import { Routes, Route } from 'react-router-dom';
+import { Box, Typography } from '@mui/material';
 import MainLayout from './components/layout/MainLayout.jsx';
 import SousMenuPage from './pages/SousMenuPage.jsx';
-import { Box, Typography } from '@mui/material';
 
 function AccueilPage() {
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5">Sélectionnez un sous-menu dans le menu latéral</Typography>
+    <Box
+      sx={{
+        height: 'calc(100vh - 160px)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        gap: 1,
+      }}
+    >
+      <Typography variant="h6" sx={{ color: 'text.primary' }}>
+        Aucun sous-menu sélectionné
+      </Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 360 }}>
+        Choisissez un sous-menu dans le panneau latéral pour afficher et gérer ses captures d'écran.
+      </Typography>
     </Box>
   );
 }
