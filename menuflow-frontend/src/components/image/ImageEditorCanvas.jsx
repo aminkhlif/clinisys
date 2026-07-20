@@ -38,6 +38,7 @@ function ImageEditorCanvas({ urlImage, actions, onDeplace, onRedimensionne, onSu
         bgcolor: 'grey.50',
       }}
       onMouseDown={() => setActionSelectionnee(null)}
+      onDragStart={(e) => e.preventDefault()}
     >
       <Box
         component="img"
@@ -45,7 +46,16 @@ function ImageEditorCanvas({ urlImage, actions, onDeplace, onRedimensionne, onSu
         src={urlImage}
         alt="édition"
         onLoad={recalculerEchelle}
-        sx={{ width: '100%', maxHeight: 420, display: 'block' }}
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
+        sx={{
+          width: '100%',
+          maxHeight: 420,
+          display: 'block',
+          userSelect: 'none',
+          WebkitUserDrag: 'none',
+          pointerEvents: 'none',
+        }}
       />
       {actions.map((action) => (
         <ActionOverlay

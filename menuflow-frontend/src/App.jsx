@@ -2,6 +2,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { Box, Typography } from '@mui/material';
 import MainLayout from './components/layout/MainLayout.jsx';
+import ModulesPage from './pages/ModulesPage.jsx';
 import SousMenuPage from './pages/SousMenuPage.jsx';
 
 function AccueilPage() {
@@ -27,14 +28,24 @@ function AccueilPage() {
   );
 }
 
-function App() {
+// Wrapper affiché pour un module donné : sidebar + routes internes (accueil / sous-menu)
+function ModuleShell() {
   return (
     <MainLayout>
       <Routes>
-        <Route path="/" element={<AccueilPage />} />
-        <Route path="/sous-menus/:sousMenuId" element={<SousMenuPage />} />
+        <Route index element={<AccueilPage />} />
+        <Route path="sous-menus/:sousMenuId" element={<SousMenuPage />} />
       </Routes>
     </MainLayout>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<ModulesPage />} />
+      <Route path="/modules/:moduleId/*" element={<ModuleShell />} />
+    </Routes>
   );
 }
 

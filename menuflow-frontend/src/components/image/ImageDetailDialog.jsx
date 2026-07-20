@@ -1,10 +1,12 @@
 // src/components/image/ImageDetailDialog.jsx
 import { useEffect, useState } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, IconButton, Stack,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useSnackbar } from 'notistack';
 import axiosClient from '../../api/axiosClient.js';
 import ConfirmDialog from '../common/ConfirmDialog.jsx';
@@ -71,39 +73,65 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
       <Dialog open={Boolean(image)} onClose={onFermer} fullWidth maxWidth="md">
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Détails de la capture
-          <IconButton onClick={onFermer} size="small"><CloseIcon fontSize="small" /></IconButton>
+          <Stack direction="row" spacing={0.5}>
+            <IconButton onClick={() => setConfirmationSuppression(true)} size="small" title="Supprimer">
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+            <IconButton onClick={onFermer} size="small" title="Fermer">
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Stack>
         </DialogTitle>
         <DialogContent>
           <Box
-            component="img"
-            src={urlImage}
-            alt={image.nom}
             sx={{
-              width: '100%',
-              maxHeight: 420,
-              objectFit: 'contain',
-              mb: 2,
               border: '1px solid',
               borderColor: 'divider',
               borderRadius: 2,
               bgcolor: 'grey.50',
+              p: 1.5,
+              mb: 2,
             }}
-          />
-          <TextField
-            fullWidth
-            multiline
-            rows={2}
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={!modeEdition}
-            error={Boolean(erreur)}
-            helperText={erreur}
-          />
+          >
+            <Box
+              component="img"
+              src={urlImage}
+              alt={image.nom}
+              sx={{
+                width: '100%',
+                maxHeight: 400,
+                objectFit: 'contain',
+                display: 'block',
+                borderRadius: 1,
+              }}
+            />
+          </Box>
+
+          <Stack direction="row" alignItems="flex-start" spacing={1}>
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              maxRows={4}
+              label="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={!modeEdition}
+              error={Boolean(erreur)}
+              helperText={erreur}
+              sx={{ '& textarea': { resize: 'none' } }}
+            />
+            {!modeEdition && (
+              <IconButton onClick={() => setModeEdition(true)} sx={{ mt: 0.5 }} title="Modifier la description">
+                <EditOutlinedIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmationSuppression(true)}>Supprimer</Button>
           <Button startIcon={<DownloadOutlinedIcon />} onClick={telecharger}>Télécharger</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button onClick={onFermer}>Fermer</Button>
           {modeEdition ? (
             <Button variant="contained" onClick={sauvegarderDescription} disabled={enCours}>
               {enCours ? 'Enregistrement…' : 'Enregistrer'}
@@ -111,7 +139,6 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
           ) : (
             <Button variant="contained" onClick={() => onOuvrirActions(image)}>Modifier</Button>
           )}
-          <Button onClick={onFermer}>Fermer</Button>
         </DialogActions>
       </Dialog>
 

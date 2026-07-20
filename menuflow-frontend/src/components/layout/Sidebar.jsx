@@ -1,10 +1,11 @@
 // src/components/layout/Sidebar.jsx
 import { useEffect, useState } from 'react';
 import {
-  Box, TextField, InputAdornment, List, Button, Stack, Typography, Skeleton,
+  Box, TextField, InputAdornment, List, Button, Stack, Typography, Skeleton, IconButton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import axiosClient from '../../api/axiosClient.js';
@@ -15,6 +16,9 @@ import ConfirmDialog from '../common/ConfirmDialog.jsx';
 
 function Sidebar() {
   const { enqueueSnackbar } = useSnackbar();
+  const { moduleId, sousMenuId } = useParams();
+  const navigate = useNavigate();
+
   const [confirmation, setConfirmation] = useState(null);
   const [menus, setMenus] = useState([]);
   const [chargementMenus, setChargementMenus] = useState(true);
@@ -29,12 +33,9 @@ function Sidebar() {
   const [sousMenuEnEdition, setSousMenuEnEdition] = useState(null);
   const [menuParentPourAjout, setMenuParentPourAjout] = useState(null);
 
-  const navigate = useNavigate();
-  const { sousMenuId } = useParams();
-
   const chargerMenus = async (termeRecherche = '') => {
     try {
-      const params = termeRecherche ? { recherche: termeRecherche } : {};
+      const params = { moduleId, ...(termeRecherche ? { recherche: termeRecherche } : {}) };
       const res = await axiosClient.get('/menus', { params });
       setMenus(res.data);
     } catch {
@@ -54,14 +55,19 @@ function Sidebar() {
   };
 
   useEffect(() => {
+    setChargementMenus(true);
+    setMenusOuverts({});
+    setSousMenusParMenu({});
     chargerMenus();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduleId]);
 
   useEffect(() => {
     const delai = setTimeout(() => {
       chargerMenus(recherche);
     }, 300);
     return () => clearTimeout(delai);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recherche]);
 
   const basculerMenu = (menuId) => {
@@ -83,7 +89,7 @@ function Sidebar() {
         await axiosClient.delete(`/sous-menus/${sousMenu.id}`);
         chargerSousMenus(sousMenu.menuId);
         if (sousMenuId === String(sousMenu.id)) {
-          navigate('/');
+          navigate(`/modules/${moduleId}`);
         }
         enqueueSnackbar('Sous-menu supprimé', { variant: 'success' });
       }
@@ -138,26 +144,26 @@ function Sidebar() {
 
   return (
     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ py: 3, px: 1, mb: 1, display: 'flex', justifyContent: 'center' }}>
-        <Box
-          component="svg"
-          viewBox="0 0 32 32"
-          sx={{ width: 40, height: 40 }}
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 2, px: 0.5, mb: 1 }}>
+        <IconButton
+          size="small"
+          onClick={() => navigate('/')}
+          title="Retour aux modules"
+          sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.1)' } }}
         >
+          <ArrowBackIcon fontSize="small" />
+        </IconButton>
+        <Box component="svg" viewBox="0 0 32 32" sx={{ width: 26, height: 26 }}>
           <rect x="3" y="3" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.95" />
-          <rect
-            x="17" y="3" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.55"
-          >
+          <rect x="17" y="3" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.55">
             <animate attributeName="opacity" values="0.35;0.85;0.35" dur="3.2s" repeatCount="indefinite" />
           </rect>
-          <rect
-            x="3" y="17" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.55"
-          >
+          <rect x="3" y="17" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.55">
             <animate attributeName="opacity" values="0.85;0.35;0.85" dur="3.2s" repeatCount="indefinite" />
           </rect>
           <rect x="17" y="17" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.95" />
         </Box>
-      </Box>
+      </Stack>
 
       <TextField
         sx={{
@@ -236,7 +242,7 @@ function Sidebar() {
                 onAjouterSousMenu={ouvrirCreationSousMenu}
                 onEditSousMenu={ouvrirEditionSousMenu}
                 onDeleteSousMenu={demanderSuppressionSousMenu}
-                onSelectSousMenu={(id) => navigate(`/sous-menus/${id}`)}
+                onSelectSousMenu={(id) => navigate(`/modules/${moduleId}/sous-menus/${id}`)}
               />
             ))}
           </List>
@@ -246,6 +252,7 @@ function Sidebar() {
       <MenuFormDialog
         ouvert={dialogMenuOuvert}
         menu={menuEnEdition}
+        moduleId={moduleId}
         onFermer={() => setDialogMenuOuvert(false)}
         onSauvegarde={apresSauvegardeMenu}
       />

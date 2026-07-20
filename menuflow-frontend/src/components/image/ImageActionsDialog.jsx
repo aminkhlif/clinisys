@@ -1,7 +1,7 @@
 // src/components/image/ImageActionsDialog.jsx
 import { useEffect, useState } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Stack, Typography, Grid, Divider, Slider, Chip,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Stack, Typography, Grid, Divider, Chip,
 } from '@mui/material';
 import BlurOnOutlinedIcon from '@mui/icons-material/BlurOnOutlined';
 import CropSquareOutlinedIcon from '@mui/icons-material/CropSquareOutlined';
@@ -9,7 +9,6 @@ import CenterFocusWeakOutlinedIcon from '@mui/icons-material/CenterFocusWeakOutl
 import AdsClickOutlinedIcon from '@mui/icons-material/AdsClickOutlined';
 import NearMeOutlinedIcon from '@mui/icons-material/NearMeOutlined';
 import UndoOutlinedIcon from '@mui/icons-material/UndoOutlined';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import { useSnackbar } from 'notistack';
 import axiosClient from '../../api/axiosClient.js';
 import {
@@ -27,6 +26,8 @@ const ICONE_ACTION = {
   CURSEUR_CLICK: AdsClickOutlinedIcon,
 };
 
+const INTENSITE_FLOU_PAR_DEFAUT = 8;
+
 function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
   const { enqueueSnackbar } = useSnackbar();
   const [description, setDescription] = useState('');
@@ -34,7 +35,6 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
   const [erreur, setErreur] = useState('');
   const [actions, setActions] = useState([]);
   const [couleurChoisie, setCouleurChoisie] = useState('#3B82F6');
-  const [intensiteFlou, setIntensiteFlou] = useState(5);
   const [enCours, setEnCours] = useState(false);
   const [dernierTypeAjoute, setDernierTypeAjoute] = useState(null);
 
@@ -60,7 +60,6 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
     : `data:${image.typeContenu};base64,${image.donneesBase64}`;
 
   const typeNecessiteCouleur = LISTE_ACTIONS.some((t) => CONFIG_ACTIONS[t].couleur);
-  const typeNecessiteIntensite = LISTE_ACTIONS.some((t) => CONFIG_ACTIONS[t].intensite);
 
   const ajouterAction = async (type) => {
     const config = CONFIG_ACTIONS[type];
@@ -71,7 +70,7 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
       largeur: config.largeurDefaut,
       hauteur: config.hauteurDefaut,
       couleur: config.couleur ? couleurChoisie : null,
-      intensite: config.intensite ? intensiteFlou : null,
+      intensite: config.intensite ? INTENSITE_FLOU_PAR_DEFAUT : null,
       imageId: image.id,
     });
     setActions((prev) => [...prev, nouvelle]);
@@ -112,20 +111,8 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
     setActions([]);
   };
 
-  const validerToutesLesActions = async () => {
-    setEnCours(true);
-    try {
-      await validerActions(image.id);
-      onSauvegarde();
-      enqueueSnackbar('Actions appliquées à l\'image', { variant: 'success' });
-    } catch {
-      enqueueSnackbar("La validation a échoué", { variant: 'error' });
-    } finally {
-      setEnCours(false);
-    }
-  };
-
-  const sauvegarderDescriptionEtFichier = async () => {
+  // Un seul bouton "Sauvegarder" : description + fichier + validation des annotations
+  const toutSauvegarder = async () => {
     if (!description.trim()) {
       setErreur('La description est obligatoire');
       return;
@@ -140,6 +127,11 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
         });
       }
       await axiosClient.patch(`/images/${image.id}/description`, null, { params: { description } });
+
+      if (actions.length > 0) {
+        await validerActions(image.id);
+      }
+
       onSauvegarde();
       enqueueSnackbar('Modifications enregistrées', { variant: 'success' });
     } catch (err) {
@@ -207,41 +199,24 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
               })}
             </Grid>
 
-            {(typeNecessiteCouleur || typeNecessiteIntensite) && (
+            {typeNecessiteCouleur && (
               <Box sx={{ mb: 2.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                  Réglages pour la prochaine annotation
+                  Couleur de la prochaine annotation
                 </Typography>
-                {typeNecessiteCouleur && (
-                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1.5 }}>
-                    <Typography variant="body2" sx={{ minWidth: 60 }}>Couleur</Typography>
-                    <Box
-                      component="input"
-                      type="color"
-                      value={couleurChoisie}
-                      onChange={(e) => setCouleurChoisie(e.target.value)}
-                      sx={{
-                        width: 36, height: 28, border: '1px solid', borderColor: 'divider',
-                        borderRadius: 1, p: 0, cursor: 'pointer', bgcolor: 'transparent',
-                      }}
-                    />
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>{couleurChoisie}</Typography>
-                  </Stack>
-                )}
-                {typeNecessiteIntensite && (
-                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1 }}>
-                    <Typography variant="body2" sx={{ minWidth: 60 }}>Intensité</Typography>
-                    <Slider
-                      size="small"
-                      value={intensiteFlou}
-                      onChange={(e, v) => setIntensiteFlou(v)}
-                      min={1}
-                      max={20}
-                      sx={{ color: 'grey.900' }}
-                    />
-                    <Typography variant="caption" sx={{ minWidth: 20, color: 'text.secondary' }}>{intensiteFlou}</Typography>
-                  </Stack>
-                )}
+                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1.5 }}>
+                  <Box
+                    component="input"
+                    type="color"
+                    value={couleurChoisie}
+                    onChange={(e) => setCouleurChoisie(e.target.value)}
+                    sx={{
+                      width: 36, height: 28, border: '1px solid', borderColor: 'divider',
+                      borderRadius: 1, p: 0, cursor: 'pointer', bgcolor: 'transparent',
+                    }}
+                  />
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>{couleurChoisie}</Typography>
+                </Stack>
               </Box>
             )}
 
@@ -263,7 +238,7 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
             <Divider sx={{ mb: 2.5 }} />
 
             <Typography variant="subtitle1" sx={{ mb: 1 }}>Remplacer l'image</Typography>
-            <Button variant="outlined" component="label" fullWidth sx={{ mb: 2.5 }}>
+            <Button variant="outlined" component="label" fullWidth>
               {nouveauFichier ? nouveauFichier.name : 'Choisir un fichier'}
               <input
                 type="file"
@@ -272,21 +247,11 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
                 onChange={(e) => setNouveauFichier(e.target.files[0])}
               />
             </Button>
-
-            <Button
-              startIcon={<CheckCircleOutlineIcon />}
-              variant="contained"
-              fullWidth
-              onClick={validerToutesLesActions}
-              disabled={actions.length === 0 || enCours}
-            >
-              Valider les annotations
-            </Button>
           </Grid>
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button variant="contained" onClick={sauvegarderDescriptionEtFichier} disabled={enCours}>
+        <Button variant="contained" onClick={toutSauvegarder} disabled={enCours}>
           {enCours ? 'Enregistrement…' : 'Sauvegarder'}
         </Button>
         <Button onClick={onFermer}>Fermer</Button>

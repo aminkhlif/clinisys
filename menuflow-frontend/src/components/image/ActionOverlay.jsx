@@ -1,12 +1,16 @@
 // src/components/image/ActionOverlay.jsx
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Box, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { CONFIG_ACTIONS } from './configActions.js';
 
+const SEUIL_DEPLACEMENT_PX = 3;
+
 function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDeplace, onRedimensionne, onSupprime }) {
   const dragRef = useRef(null);
   const config = CONFIG_ACTIONS[action.type];
+  // "enMouvement" ne devient vrai qu'après un vrai déplacement (pas sur un simple clic de sélection)
+  const [enMouvement, setEnMouvement] = useState(false);
 
   const gererDebutDrag = (e) => {
     e.stopPropagation();
@@ -17,21 +21,33 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
     const yInitial = action.y;
     const xMax = Math.max(0, limites.largeur - action.largeur);
     const yMax = Math.max(0, limites.hauteur - action.hauteur);
+    let aBouge = false;
 
     const gererMouvement = (moveEvent) => {
-      const deltaX = (moveEvent.clientX - xDepart) / echelle;
-      const deltaY = (moveEvent.clientY - yDepart) / echelle;
+      const ecartX = moveEvent.clientX - xDepart;
+      const ecartY = moveEvent.clientY - yDepart;
+      if (!aBouge && (Math.abs(ecartX) > SEUIL_DEPLACEMENT_PX || Math.abs(ecartY) > SEUIL_DEPLACEMENT_PX)) {
+        aBouge = true;
+        setEnMouvement(true);
+      }
+      if (!aBouge) return;
+
+      const deltaX = ecartX / echelle;
+      const deltaY = ecartY / echelle;
       const nouveauX = Math.min(Math.max(0, Math.round(xInitial + deltaX)), xMax);
       const nouveauY = Math.min(Math.max(0, Math.round(yInitial + deltaY)), yMax);
       onDeplace(action.id, nouveauX, nouveauY, false);
     };
 
     const gererFin = (upEvent) => {
-      const deltaX = (upEvent.clientX - xDepart) / echelle;
-      const deltaY = (upEvent.clientY - yDepart) / echelle;
-      const nouveauX = Math.min(Math.max(0, Math.round(xInitial + deltaX)), xMax);
-      const nouveauY = Math.min(Math.max(0, Math.round(yInitial + deltaY)), yMax);
-      onDeplace(action.id, nouveauX, nouveauY, true);
+      if (aBouge) {
+        const deltaX = (upEvent.clientX - xDepart) / echelle;
+        const deltaY = (upEvent.clientY - yDepart) / echelle;
+        const nouveauX = Math.min(Math.max(0, Math.round(xInitial + deltaX)), xMax);
+        const nouveauY = Math.min(Math.max(0, Math.round(yInitial + deltaY)), yMax);
+        onDeplace(action.id, nouveauX, nouveauY, true);
+      }
+      setEnMouvement(false);
       document.removeEventListener('mousemove', gererMouvement);
       document.removeEventListener('mouseup', gererFin);
     };
@@ -48,6 +64,7 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
     const hauteurInitiale = action.hauteur;
     const largeurMax = limites.largeur - action.x;
     const hauteurMax = limites.hauteur - action.y;
+    setEnMouvement(true);
 
     const gererMouvement = (moveEvent) => {
       const deltaX = (moveEvent.clientX - xDepart) / echelle;
@@ -63,6 +80,7 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
       const nouvelleLargeur = Math.min(Math.max(10, Math.round(largeurInitiale + deltaX)), largeurMax);
       const nouvelleHauteur = Math.min(Math.max(10, Math.round(hauteurInitiale + deltaY)), hauteurMax);
       onRedimensionne(action.id, nouvelleLargeur, nouvelleHauteur, true);
+      setEnMouvement(false);
       document.removeEventListener('mousemove', gererMouvement);
       document.removeEventListener('mouseup', gererFin);
     };
@@ -77,7 +95,20 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
 
   const estCurseur = action.type.startsWith('CURSEUR');
   const estRectangleOuFocus = action.type === 'RECTANGLE' || action.type === 'FOCUS';
+  const estFlou = action.type === 'FLOU';
 
+  // Convertit une couleur hex en rgba pour un remplissage translucide (jamais de bloc opaque)
+  const versRgbaLeger = (hex, alpha) => {
+    if (!hex || !hex.startsWith('#')) return `rgba(59,130,246,${alpha})`;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
+
+  // Seul le flou (backdrop-filter, coûteux) est simplifié pendant un vrai déplacement.
+  // Rectangle / Focus / Curseur gardent EXACTEMENT le même rendu, qu'on clique ou qu'on déplace :
+  // ça évite tout effet de "disparition" au clic.
   return (
     <Box
       ref={dragRef}
@@ -88,14 +119,22 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
         top: action.y * echelle,
         width: action.largeur * echelle,
         height: action.hauteur * echelle,
-        border: selectionnee ? '2px dashed #121212' : '1px solid rgba(0,0,0,0.25)',
-        backgroundColor: estRectangleOuFocus ? 'transparent' : (action.type === 'FLOU' ? couleurFond : 'transparent'),
-        outline: estRectangleOuFocus ? `3px solid ${couleurFond}` : 'none',
-        borderRadius: estCurseur ? '50%' : 0,
+        border: selectionnee
+          ? '2px dashed #121212'
+          : `1.5px solid ${estRectangleOuFocus ? couleurFond : 'rgba(0,0,0,0.25)'}`,
+        backgroundColor: estFlou
+          ? 'rgba(255,255,255,0.05)'
+          : estRectangleOuFocus
+            ? versRgbaLeger(couleurFond, 0.14)
+            : 'transparent',
+        backdropFilter: estFlou && !enMouvement ? `blur(${action.intensite || 8}px)` : 'none',
+        WebkitBackdropFilter: estFlou && !enMouvement ? `blur(${action.intensite || 8}px)` : 'none',
+        borderRadius: estCurseur ? '50%' : 2,
         cursor: 'move',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        willChange: 'left, top, width, height',
       }}
     >
       {estCurseur && (

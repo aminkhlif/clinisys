@@ -1,17 +1,17 @@
-// src/components/menu/MenuFormDialog.jsx
+// src/components/module/ModuleFormDialog.jsx
 import { useEffect, useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
 import axiosClient from '../../api/axiosClient.js';
 
-function MenuFormDialog({ ouvert, menu, moduleId, onFermer, onSauvegarde }) {
+function ModuleFormDialog({ ouvert, module, onFermer, onSauvegarde }) {
   const [nom, setNom] = useState('');
   const [erreur, setErreur] = useState('');
   const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
-    setNom(menu ? menu.nom : '');
+    setNom(module ? module.nom : '');
     setErreur('');
-  }, [menu, ouvert]);
+  }, [module, ouvert]);
 
   const sauvegarder = async () => {
     if (!nom.trim()) {
@@ -20,10 +20,10 @@ function MenuFormDialog({ ouvert, menu, moduleId, onFermer, onSauvegarde }) {
     }
     setEnCours(true);
     try {
-      if (menu) {
-        await axiosClient.put(`/menus/${menu.id}`, { nom });
+      if (module) {
+        await axiosClient.put(`/modules/${module.id}`, { nom });
       } else {
-        await axiosClient.post('/menus', { nom, moduleId });
+        await axiosClient.post('/modules', { nom });
       }
       onSauvegarde();
     } catch (err) {
@@ -35,13 +35,13 @@ function MenuFormDialog({ ouvert, menu, moduleId, onFermer, onSauvegarde }) {
 
   return (
     <Dialog open={ouvert} onClose={onFermer} fullWidth maxWidth="xs">
-      <DialogTitle>{menu ? 'Modifier le menu' : 'Nouveau menu'}</DialogTitle>
+      <DialogTitle>{module ? 'Modifier le module' : 'Nouveau module'}</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           fullWidth
           margin="dense"
-          label="Nom du menu"
+          label="Nom du module"
           value={nom}
           onChange={(e) => setNom(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sauvegarder()}
@@ -59,4 +59,4 @@ function MenuFormDialog({ ouvert, menu, moduleId, onFermer, onSauvegarde }) {
   );
 }
 
-export default MenuFormDialog;
+export default ModuleFormDialog;
