@@ -4,6 +4,10 @@ import { Box, Typography } from '@mui/material';
 import MainLayout from './components/layout/MainLayout.jsx';
 import ModulesPage from './pages/ModulesPage.jsx';
 import SousMenuPage from './pages/SousMenuPage.jsx';
+import LoginPage from './pages/LoginPage.jsx';
+import RegisterPage from './pages/RegisterPage.jsx';
+import { AuthProvider } from './context/AuthContext.jsx';
+import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 
 function AccueilPage() {
   return (
@@ -42,10 +46,17 @@ function ModuleShell() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<ModulesPage />} />
-      <Route path="/modules/:moduleId/*" element={<ModuleShell />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        {/* Routes publiques */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Toutes les autres routes exigent d'être authentifié */}
+        <Route path="/" element={<ProtectedRoute><ModulesPage /></ProtectedRoute>} />
+        <Route path="/modules/:moduleId/*" element={<ProtectedRoute><ModuleShell /></ProtectedRoute>} />
+      </Routes>
+    </AuthProvider>
   );
 }
 

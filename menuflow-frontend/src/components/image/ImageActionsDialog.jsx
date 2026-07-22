@@ -27,6 +27,7 @@ const ICONE_ACTION = {
 };
 
 const INTENSITE_FLOU_PAR_DEFAUT = 8;
+const COULEUR_PAR_DEFAUT = '#FF0000';
 
 function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
   const { enqueueSnackbar } = useSnackbar();
@@ -34,15 +35,18 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
   const [nouveauFichier, setNouveauFichier] = useState(null);
   const [erreur, setErreur] = useState('');
   const [actions, setActions] = useState([]);
-  const [couleurChoisie, setCouleurChoisie] = useState('#3B82F6');
+  const [couleurChoisie, setCouleurChoisie] = useState(COULEUR_PAR_DEFAUT);
   const [enCours, setEnCours] = useState(false);
   const [dernierTypeAjoute, setDernierTypeAjoute] = useState(null);
+  const [actionSelectionneeId, setActionSelectionneeId] = useState(null);
 
   useEffect(() => {
     if (image) {
       setDescription(image.description);
       setNouveauFichier(null);
       setErreur('');
+      setActionSelectionneeId(null);
+      setCouleurChoisie(COULEUR_PAR_DEFAUT);
       chargerActions();
     }
   }, [image]);
@@ -61,6 +65,9 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
 
   const typeNecessiteCouleur = LISTE_ACTIONS.some((t) => CONFIG_ACTIONS[t].couleur);
 
+  const actionSelectionnee = actions.find((a) => a.id === actionSelectionneeId) || null;
+  const selectionAcceptesCouleur = actionSelectionnee && CONFIG_ACTIONS[actionSelectionnee.type]?.couleur;
+
   const ajouterAction = async (type) => {
     const config = CONFIG_ACTIONS[type];
     const nouvelle = await creerAction({
@@ -74,8 +81,20 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
       imageId: image.id,
     });
     setActions((prev) => [...prev, nouvelle]);
+    setActionSelectionneeId(nouvelle.id);
     setDernierTypeAjoute(type);
     setTimeout(() => setDernierTypeAjoute(null), 900);
+  };
+
+  // Changement de couleur en temps réel :
+  // - si une annotation compatible est sélectionnée, sa couleur change immédiatement (aperçu + sauvegarde serveur)
+  // - sinon, ça définit juste la couleur des prochaines annotations créées
+  const changerCouleur = (nouvelleCouleur) => {
+    setCouleurChoisie(nouvelleCouleur);
+    if (selectionAcceptesCouleur) {
+      setActions((prev) => prev.map((a) => (a.id === actionSelectionneeId ? { ...a, couleur: nouvelleCouleur } : a)));
+      modifierAction(actionSelectionneeId, { ...actionSelectionnee, couleur: nouvelleCouleur });
+    }
   };
 
   const annulerDerniereAction = async () => {
@@ -83,6 +102,7 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
     const derniere = actions[actions.length - 1];
     await supprimerAction(derniere.id);
     setActions((prev) => prev.slice(0, -1));
+    if (actionSelectionneeId === derniere.id) setActionSelectionneeId(null);
   };
 
   const deplacerAction = (actionId, x, y, persister) => {
@@ -104,11 +124,13 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
   const supprimerUneAction = async (actionId) => {
     await supprimerAction(actionId);
     setActions((prev) => prev.filter((a) => a.id !== actionId));
+    if (actionSelectionneeId === actionId) setActionSelectionneeId(null);
   };
 
   const annulerToutesLesActions = async () => {
     await annulerActions(image.id);
     setActions([]);
+    setActionSelectionneeId(null);
   };
 
   // Un seul bouton "Sauvegarder" : description + fichier + validation des annotations
@@ -153,6 +175,8 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
               onDeplace={deplacerAction}
               onRedimensionne={redimensionnerAction}
               onSupprime={supprimerUneAction}
+              actionSelectionneeId={actionSelectionneeId}
+              onSelectionnerAction={setActionSelectionneeId}
             />
             <TextField
               fullWidth
@@ -202,20 +226,22 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
             {typeNecessiteCouleur && (
               <Box sx={{ mb: 2.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                  Couleur de la prochaine annotation
+                  {selectionAcceptesCouleur ? 'Couleur de l\'annotation sélectionnée' : 'Couleur de la prochaine annotation'}
                 </Typography>
                 <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1.5 }}>
                   <Box
                     component="input"
                     type="color"
-                    value={couleurChoisie}
-                    onChange={(e) => setCouleurChoisie(e.target.value)}
+                    value={selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
+                    onChange={(e) => changerCouleur(e.target.value)}
                     sx={{
                       width: 36, height: 28, border: '1px solid', borderColor: 'divider',
                       borderRadius: 1, p: 0, cursor: 'pointer', bgcolor: 'transparent',
                     }}
                   />
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>{couleurChoisie}</Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    {selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
+                  </Typography>
                 </Stack>
               </Box>
             )}

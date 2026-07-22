@@ -1,35 +1,50 @@
 // src/components/module/ModuleCard.jsx
-import { Card, CardActionArea, Box, Typography, IconButton, Stack } from '@mui/material';
+import { Card, CardActionArea, Box, Typography, IconButton, Stack, Chip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import WidgetsOutlinedIcon from '@mui/icons-material/WidgetsOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-function ModuleCard({ module, onOuvrir, onEdit, onDelete }) {
+function ModuleCard({ module, onOuvrir, onEdit, onDelete, misEnAvant = false }) {
+  const estVide = module.nombreMenus === 0;
+
   return (
     <Card
       sx={{
         position: 'relative',
-        '&:hover': { borderColor: 'grey.400', transform: 'translateY(-2px)' },
+        height: 148,
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
+        ...(misEnAvant && {
+          borderColor: 'grey.900',
+          boxShadow: '0 0 0 3px rgba(18,18,18,0.08)',
+        }),
+        '&:hover': {
+          borderColor: 'grey.400',
+          transform: 'translateY(-2px)',
+          boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+        },
         '&:hover .fleche': { opacity: 1, transform: 'translateX(0)' },
         '& .row-actions': { opacity: 0 },
         '&:hover .row-actions': { opacity: 1 },
       }}
     >
-      <CardActionArea onClick={onOuvrir} sx={{ p: 2.5, height: '100%' }}>
+      <CardActionArea onClick={onOuvrir} sx={{ p: 2.25, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
         <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
           <Box
             sx={{
-              width: 40,
-              height: 40,
+              width: 38,
+              height: 38,
               borderRadius: 2,
-              bgcolor: 'grey.900',
+              bgcolor: estVide ? 'grey.300' : 'grey.900',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            <WidgetsOutlinedIcon sx={{ color: '#FFFFFF', fontSize: 20 }} />
+            <WidgetsOutlinedIcon sx={{ color: '#FFFFFF', fontSize: 19 }} />
           </Box>
           <ChevronRightIcon
             className="fleche"
@@ -37,12 +52,33 @@ function ModuleCard({ module, onOuvrir, onEdit, onDelete }) {
           />
         </Stack>
 
-        <Typography variant="subtitle1" sx={{ mt: 2, mb: 0.5 }}>
-          {module.nom}
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {module.nombreMenus != null ? `${module.nombreMenus} menu${module.nombreMenus > 1 ? 's' : ''}` : 'Voir les menus'}
-        </Typography>
+        <Box sx={{ flex: 1, minHeight: 0, mt: 1.25, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Typography
+            variant="subtitle1"
+            title={module.nom}
+            sx={{
+              mb: 0.5,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              color: estVide ? 'text.secondary' : 'text.primary',
+            }}
+          >
+            {module.nom}
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {module.nombreMenus != null ? `${module.nombreMenus} menu${module.nombreMenus > 1 ? 's' : ''}` : 'Voir les menus'}
+            </Typography>
+            {estVide && (
+              <Chip
+                size="small"
+                label="Vide"
+                sx={{ height: 18, fontSize: '0.65rem', bgcolor: 'grey.100', color: 'text.secondary' }}
+              />
+            )}
+          </Stack>
+        </Box>
       </CardActionArea>
 
       <Stack

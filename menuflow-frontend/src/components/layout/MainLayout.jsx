@@ -1,6 +1,7 @@
 // src/components/layout/MainLayout.jsx
 import { AppBar, Box, Drawer, Toolbar } from '@mui/material';
 import Sidebar from './Sidebar.jsx';
+import UserMenu from '../auth/UserMenu.jsx';
 
 const DRAWER_WIDTH = 300;
 
@@ -31,7 +32,7 @@ function MainLayout({ children }) {
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
         }}
       >
-        <Toolbar sx={{ minHeight: 64 }}>
+        <Toolbar sx={{ minHeight: 64, justifyContent: 'space-between' }}>
           <Box
             component="svg"
             viewBox="0 0 32 32"
@@ -50,6 +51,7 @@ function MainLayout({ children }) {
             </rect>
             <rect x="17" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
           </Box>
+          <UserMenu variant="light" />
         </Toolbar>
       </AppBar>
 

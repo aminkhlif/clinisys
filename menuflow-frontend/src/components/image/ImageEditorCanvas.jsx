@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import ActionOverlay from './ActionOverlay.jsx';
 
-function ImageEditorCanvas({ urlImage, actions, onDeplace, onRedimensionne, onSupprime }) {
+function ImageEditorCanvas({
+  urlImage, actions, onDeplace, onRedimensionne, onSupprime,
+  actionSelectionneeId, onSelectionnerAction,
+}) {
   const imgRef = useRef(null);
   const [echelle, setEchelle] = useState(1);
   const [dimensions, setDimensions] = useState({ largeur: 0, hauteur: 0 });
-  const [actionSelectionnee, setActionSelectionnee] = useState(null);
 
   const recalculerEchelle = () => {
     if (imgRef.current && imgRef.current.naturalWidth) {
@@ -37,7 +39,7 @@ function ImageEditorCanvas({ urlImage, actions, onDeplace, onRedimensionne, onSu
         borderColor: 'divider',
         bgcolor: 'grey.50',
       }}
-      onMouseDown={() => setActionSelectionnee(null)}
+      onMouseDown={() => onSelectionnerAction(null)}
       onDragStart={(e) => e.preventDefault()}
     >
       <Box
@@ -63,8 +65,8 @@ function ImageEditorCanvas({ urlImage, actions, onDeplace, onRedimensionne, onSu
           action={action}
           echelle={echelle}
           limites={dimensions}
-          selectionnee={actionSelectionnee === action.id}
-          onSelect={() => setActionSelectionnee(action.id)}
+          selectionnee={actionSelectionneeId === action.id}
+          onSelect={() => onSelectionnerAction(action.id)}
           onDeplace={onDeplace}
           onRedimensionne={onRedimensionne}
           onSupprime={onSupprime}

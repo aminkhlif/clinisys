@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Stack, Typography, Button, TextField, InputAdornment, Grid, Skeleton,
+  Box, Stack, Typography, Button, TextField, InputAdornment, Grid, Skeleton, Breadcrumbs,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -11,6 +11,7 @@ import axiosClient from '../api/axiosClient.js';
 import ModuleCard from '../components/module/ModuleCard.jsx';
 import ModuleFormDialog from '../components/module/ModuleFormDialog.jsx';
 import ConfirmDialog from '../components/common/ConfirmDialog.jsx';
+import UserMenu from '../components/auth/UserMenu.jsx';
 
 const TRIANGLE_PATTERN_SVG = `
   <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
@@ -34,6 +35,7 @@ function ModulesPage() {
   const [moduleEnEdition, setModuleEnEdition] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [moduleMisEnAvantId, setModuleMisEnAvantId] = useState(null);
 
   const chargerModules = async (termeRecherche = '') => {
     setChargement(true);
@@ -67,10 +69,16 @@ function ModulesPage() {
     setDialogOuvert(true);
   };
 
-  const apresSauvegarde = () => {
+  const apresSauvegarde = async (moduleCreeOuModifie) => {
     setDialogOuvert(false);
-    chargerModules(recherche);
+    await chargerModules(recherche);
     enqueueSnackbar(moduleEnEdition ? 'Module mis à jour' : 'Module créé', { variant: 'success' });
+
+    // Mise en avant visuelle de la card nouvellement créée / modifiée
+    if (moduleCreeOuModifie?.id) {
+      setModuleMisEnAvantId(moduleCreeOuModifie.id);
+      setTimeout(() => setModuleMisEnAvantId(null), 2200);
+    }
   };
 
   const confirmerSuppression = async () => {
@@ -95,31 +103,56 @@ function ModulesPage() {
         backgroundSize: '120px 120px',
       }}
     >
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 4 }, py: { xs: 4, sm: 6 } }}>
-        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 4 }}>
-          <Box component="svg" viewBox="0 0 32 32" sx={{ width: 34, height: 34 }}>
-            <rect x="3" y="3" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
-            <rect x="17" y="3" width="12" height="12" rx="3" fill="#121212" opacity="0.55">
-              <animate attributeName="opacity" values="0.35;0.85;0.35" dur="3.2s" repeatCount="indefinite" />
-            </rect>
-            <rect x="3" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.55">
-              <animate attributeName="opacity" values="0.85;0.35;0.85" dur="3.2s" repeatCount="indefinite" />
-            </rect>
-            <rect x="17" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
-          </Box>
-          
+      {/* Bandeau haut collant : logo + fil d'ariane */}
+      <Box
+        sx={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 5,
+          bgcolor: 'rgba(255,255,255,0.85)',
+          backdropFilter: 'blur(8px)',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 4 }, py: 1.5 }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Box component="svg" viewBox="0 0 32 32" sx={{ width: 26, height: 26 }}>
+              <rect x="3" y="3" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
+              <rect x="17" y="3" width="12" height="12" rx="3" fill="#121212" opacity="0.55">
+                <animate attributeName="opacity" values="0.35;0.85;0.35" dur="3.2s" repeatCount="indefinite" />
+              </rect>
+              <rect x="3" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.55">
+                <animate attributeName="opacity" values="0.85;0.35;0.85" dur="3.2s" repeatCount="indefinite" />
+              </rect>
+              <rect x="17" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
+            </Box>
+            <Breadcrumbs separator="›" sx={{ fontSize: '0.85rem', '& .MuiBreadcrumbs-separator': { color: 'text.secondary' } }}>
+              <Typography sx={{ fontWeight: 700, letterSpacing: '0.03em', fontSize: '0.85rem' }}>
+                MENUFLOW
+              </Typography>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>Modules</Typography>
+            </Breadcrumbs>
+          </Stack>
+          <UserMenu variant="light" />
         </Stack>
 
+        {/* Barre d'outils collante elle aussi : recherche, tri, création */}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           justifyContent="space-between"
-          alignItems={{ sm: 'center' }}
-          spacing={2}
-          sx={{ mb: 4 }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          spacing={1.5}
+          sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 4 }, pb: 2 }}
         >
           <Box>
             <Typography variant="h5">Modules</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
               Sélectionnez un module pour gérer ses menus et sous-menus
             </Typography>
           </Box>
@@ -138,19 +171,21 @@ function ModulesPage() {
                   ),
                 },
               }}
-              sx={{ width: 260, bgcolor: 'background.paper' }}
+              sx={{ width: 240, bgcolor: 'background.paper' }}
             />
             <Button startIcon={<AddIcon />} variant="contained" onClick={ouvrirCreation}>
               Nouveau module
             </Button>
           </Stack>
         </Stack>
+      </Box>
 
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 4 }, py: { xs: 3, sm: 4 } }}>
         {chargement ? (
           <Grid container spacing={2.5}>
             {[...Array(6)].map((_, i) => (
               <Grid key={i} size={{ xs: 12, sm: 6, md: 4 }}>
-                <Skeleton variant="rounded" height={140} />
+                <Skeleton variant="rounded" height={148} />
               </Grid>
             ))}
           </Grid>
@@ -175,6 +210,7 @@ function ModulesPage() {
               <Grid key={module.id} size={{ xs: 12, sm: 6, md: 4 }}>
                 <ModuleCard
                   module={module}
+                  misEnAvant={moduleMisEnAvantId === module.id}
                   onOuvrir={() => navigate(`/modules/${module.id}`)}
                   onEdit={() => ouvrirEdition(module)}
                   onDelete={() => setConfirmation(module)}
