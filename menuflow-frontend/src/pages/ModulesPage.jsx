@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Stack, Typography, Button, TextField, InputAdornment, Grid, Skeleton, Breadcrumbs,
+  Box, Stack, Typography, Button, TextField, InputAdornment, Grid, Skeleton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -11,18 +11,10 @@ import axiosClient from '../api/axiosClient.js';
 import ModuleCard from '../components/module/ModuleCard.jsx';
 import ModuleFormDialog from '../components/module/ModuleFormDialog.jsx';
 import ConfirmDialog from '../components/common/ConfirmDialog.jsx';
-import UserMenu from '../components/auth/UserMenu.jsx';
+import TopBar from '../components/layout/TopBar.jsx';
 
-const TRIANGLE_PATTERN_SVG = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
-    <rect width="120" height="120" fill="#FAFAFA" />
-    <polygon points="0,0 60,0 0,60" fill="#F2F2F2" />
-    <polygon points="60,0 120,0 120,60 60,60" fill="#F5F5F5" />
-    <polygon points="0,60 60,60 0,120" fill="#F4F4F4" />
-    <polygon points="60,60 120,60 120,120 60,120" fill="#F1F1F1" />
-  </svg>
-`;
-const TRIANGLE_PATTERN_URL = `url("data:image/svg+xml,${encodeURIComponent(TRIANGLE_PATTERN_SVG)}")`;
+// Fond très discret : léger dégradé, plus de motif visuellement chargé.
+const PAGE_BACKGROUND = 'linear-gradient(180deg, #FAFAFA 0%, #F3F4F6 100%)';
 
 function ModulesPage() {
   const navigate = useNavigate();
@@ -99,16 +91,14 @@ function ModulesPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        backgroundImage: TRIANGLE_PATTERN_URL,
-        backgroundSize: '120px 120px',
+        background: PAGE_BACKGROUND,
       }}
     >
-      {/* Bandeau haut collant : logo + fil d'ariane */}
+      <TopBar breadcrumb="Modules" />
+
+      {/* Barre d'outils : titre, recherche, création */}
       <Box
         sx={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 5,
           bgcolor: 'rgba(255,255,255,0.85)',
           backdropFilter: 'blur(8px)',
           borderBottom: '1px solid',
@@ -116,39 +106,11 @@ function ModulesPage() {
         }}
       >
         <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 4 }, py: 1.5 }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box component="svg" viewBox="0 0 32 32" sx={{ width: 26, height: 26 }}>
-              <rect x="3" y="3" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
-              <rect x="17" y="3" width="12" height="12" rx="3" fill="#121212" opacity="0.55">
-                <animate attributeName="opacity" values="0.35;0.85;0.35" dur="3.2s" repeatCount="indefinite" />
-              </rect>
-              <rect x="3" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.55">
-                <animate attributeName="opacity" values="0.85;0.35;0.85" dur="3.2s" repeatCount="indefinite" />
-              </rect>
-              <rect x="17" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
-            </Box>
-            <Breadcrumbs separator="›" sx={{ fontSize: '0.85rem', '& .MuiBreadcrumbs-separator': { color: 'text.secondary' } }}>
-              <Typography sx={{ fontWeight: 700, letterSpacing: '0.03em', fontSize: '0.85rem' }}>
-                MENUFLOW
-              </Typography>
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>Modules</Typography>
-            </Breadcrumbs>
-          </Stack>
-          <UserMenu variant="light" />
-        </Stack>
-
-        {/* Barre d'outils collante elle aussi : recherche, tri, création */}
-        <Stack
           direction={{ xs: 'column', sm: 'row' }}
           justifyContent="space-between"
           alignItems={{ xs: 'flex-start', sm: 'center' }}
           spacing={1.5}
-          sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 4 }, pb: 2 }}
+          sx={{ maxWidth: 1200, width: '100%', boxSizing: 'border-box', mx: 'auto', px: { xs: 2, sm: 4 }, py: 2 }}
         >
           <Box>
             <Typography variant="h5">Modules</Typography>
@@ -156,7 +118,7 @@ function ModulesPage() {
               Sélectionnez un module pour gérer ses menus et sous-menus
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1.5}>
+          <Stack direction="row" spacing={1.5} sx={{ flexShrink: 0 }}>
             <TextField
               size="small"
               placeholder="Rechercher un module…"
@@ -171,7 +133,15 @@ function ModulesPage() {
                   ),
                 },
               }}
-              sx={{ width: 240, bgcolor: 'background.paper' }}
+              sx={{
+                width: 260,
+                bgcolor: 'background.paper',
+                '& .MuiOutlinedInput-root': {
+                  height: 46,
+                  borderRadius: '14px',
+                  boxShadow: '0 1px 2px rgba(16,24,40,0.05)',
+                },
+              }}
             />
             <Button startIcon={<AddIcon />} variant="contained" onClick={ouvrirCreation}>
               Nouveau module
@@ -180,7 +150,7 @@ function ModulesPage() {
         </Stack>
       </Box>
 
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 4 }, py: { xs: 3, sm: 4 } }}>
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 4 }, pt: { xs: 4, sm: 5 }, pb: { xs: 3, sm: 4 } }}>
         {chargement ? (
           <Grid container spacing={2.5}>
             {[...Array(6)].map((_, i) => (
@@ -206,10 +176,11 @@ function ModulesPage() {
           </Box>
         ) : (
           <Grid container spacing={2.5}>
-            {modules.map((module) => (
+            {modules.map((module, index) => (
               <Grid key={module.id} size={{ xs: 12, sm: 6, md: 4 }}>
                 <ModuleCard
                   module={module}
+                  index={index}
                   misEnAvant={moduleMisEnAvantId === module.id}
                   onOuvrir={() => navigate(`/modules/${module.id}`)}
                   onEdit={() => ouvrirEdition(module)}
