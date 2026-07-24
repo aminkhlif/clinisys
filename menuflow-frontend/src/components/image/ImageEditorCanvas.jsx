@@ -5,7 +5,7 @@ import ActionOverlay from './ActionOverlay.jsx';
 
 function ImageEditorCanvas({
   urlImage, actions, onDeplace, onRedimensionne, onSupprime,
-  actionSelectionneeId, onSelectionnerAction,
+  actionSelectionneeId, onSelectionnerAction, maxHeight = 420,
 }) {
   const imgRef = useRef(null);
   const [echelle, setEchelle] = useState(1);
@@ -52,7 +52,7 @@ function ImageEditorCanvas({
         onDragStart={(e) => e.preventDefault()}
         sx={{
           width: '100%',
-          maxHeight: 420,
+          maxHeight,
           display: 'block',
           userSelect: 'none',
           WebkitUserDrag: 'none',

@@ -1,6 +1,6 @@
 // src/pages/SousMenuPage.jsx
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box, Stack, Typography, Button, TextField, InputAdornment, Chip, Skeleton,
 } from '@mui/material';
@@ -13,12 +13,12 @@ import axiosClient from '../api/axiosClient.js';
 import ImageGrid from '../components/image/ImageGrid.jsx';
 import ImageUploadDialog from '../components/image/ImageUploadDialog.jsx';
 import ImageDetailDialog from '../components/image/ImageDetailDialog.jsx';
-import ImageActionsDialog from '../components/image/ImageActionsDialog.jsx';
 import DiaporamaDialog from '../components/image/DiaporamaDialog.jsx';
 import ConfirmDialog from '../components/common/ConfirmDialog.jsx';
 
 function SousMenuPage() {
-  const { sousMenuId } = useParams();
+  const { moduleId, sousMenuId } = useParams();
+  const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
   const [sousMenu, setSousMenu] = useState(null);
   const [images, setImages] = useState([]);
@@ -28,7 +28,6 @@ function SousMenuPage() {
 
   const [dialogUploadOuvert, setDialogUploadOuvert] = useState(false);
   const [imageDetail, setImageDetail] = useState(null);
-  const [imageActions, setImageActions] = useState(null);
   const [diaporamaOuvert, setDiaporamaOuvert] = useState(false);
   const [confirmationSuppression, setConfirmationSuppression] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
@@ -220,7 +219,7 @@ function SousMenuPage() {
           onChangerSelection={setSelectionnees}
           onReordonne={setImages}
           onOuvrirDetail={setImageDetail}
-          onOuvrirActions={setImageActions}
+          onOuvrirActions={(img) => navigate(`/modules/${moduleId}/sous-menus/${sousMenuId}/images/${img.id}`)}
         />
       )}
 
@@ -239,13 +238,10 @@ function SousMenuPage() {
         image={imageDetail}
         onFermer={() => setImageDetail(null)}
         onModifie={() => chargerImages(recherche)}
-        onOuvrirActions={(img) => { setImageDetail(null); setImageActions(img); }}
-      />
-
-      <ImageActionsDialog
-        image={imageActions}
-        onFermer={() => setImageActions(null)}
-        onSauvegarde={() => { setImageActions(null); chargerImages(recherche); }}
+        onOuvrirActions={(img) => {
+          setImageDetail(null);
+          navigate(`/modules/${moduleId}/sous-menus/${sousMenuId}/images/${img.id}`);
+        }}
       />
 
       <DiaporamaDialog

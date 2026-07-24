@@ -2,6 +2,7 @@
 import { AppBar, Box, Drawer, Toolbar } from '@mui/material';
 import Sidebar from './Sidebar.jsx';
 import UserMenu from '../auth/UserMenu.jsx';
+import { dotGridBackgroundSx } from '../../theme/backgrounds.js';
 
 const DRAWER_WIDTH = 300;
 
@@ -83,9 +84,7 @@ function MainLayout({ children }) {
           p: { xs: 2, sm: 3, md: 4 },
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           maxWidth: '100%',
-          backgroundImage: 'radial-gradient(circle, #DDDDDD 1px, transparent 1px)',
-          backgroundSize: '22px 22px',
-          backgroundPosition: '-11px -11px',
+          ...dotGridBackgroundSx,
         }}
       >
         <Toolbar sx={{ minHeight: 64 }} />

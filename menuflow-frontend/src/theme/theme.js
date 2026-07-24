@@ -95,7 +95,12 @@ const theme = createTheme({
         contained: {
           backgroundColor: grey[900],
           color: grey[0],
-          '&:hover': { backgroundColor: grey[1000] },
+          '&:hover': {
+            backgroundColor: grey[1000],
+            boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+            transform: 'translateY(-1px)',
+          },
+          '&:active': { transform: 'translateY(0)' },
           '&.Mui-disabled': { backgroundColor: grey[100], color: grey[300] },
         },
         outlined: {

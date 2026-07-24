@@ -4,6 +4,7 @@ import { Box, Typography } from '@mui/material';
 import MainLayout from './components/layout/MainLayout.jsx';
 import ModulesPage from './pages/ModulesPage.jsx';
 import SousMenuPage from './pages/SousMenuPage.jsx';
+import ImageEditPage from './pages/ImageEditPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
@@ -54,6 +55,10 @@ function App() {
 
         {/* Toutes les autres routes exigent d'être authentifié */}
         <Route path="/" element={<ProtectedRoute><ModulesPage /></ProtectedRoute>} />
+        <Route
+          path="/modules/:moduleId/sous-menus/:sousMenuId/images/:imageId"
+          element={<ProtectedRoute><ImageEditPage /></ProtectedRoute>}
+        />
         <Route path="/modules/:moduleId/*" element={<ProtectedRoute><ModuleShell /></ProtectedRoute>} />
       </Routes>
     </AuthProvider>

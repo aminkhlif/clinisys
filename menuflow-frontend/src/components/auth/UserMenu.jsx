@@ -1,5 +1,5 @@
 // src/components/auth/UserMenu.jsx
-import { Stack, Typography, Button } from '@mui/material';
+import { Stack, Typography, IconButton, Tooltip, Avatar } from '@mui/material';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
@@ -20,31 +20,60 @@ function UserMenu({ variant = 'light' }) {
 
   if (!utilisateur) return null;
 
+  const initiale = utilisateur.nomUtilisateur.charAt(0).toUpperCase();
+
   return (
-    <Stack direction="row" alignItems="center" spacing={1.25}>
-      <Typography
+    <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1}
         sx={{
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          color: estSombre ? 'rgba(255,255,255,0.85)' : 'text.primary',
+          pl: 0.5,
+          pr: 1.5,
+          py: 0.5,
+          borderRadius: 999,
+          bgcolor: estSombre ? 'rgba(255,255,255,0.08)' : 'grey.100',
         }}
       >
-        {utilisateur.nomUtilisateur}
-      </Typography>
-      <Button
-        size="small"
-        onClick={gererDeconnexion}
-        startIcon={<LogoutOutlinedIcon fontSize="small" />}
-        sx={{
-          color: estSombre ? 'rgba(255,255,255,0.6)' : 'text.secondary',
-          '&:hover': {
-            bgcolor: estSombre ? 'rgba(255,255,255,0.1)' : 'grey.100',
-            color: estSombre ? '#FFFFFF' : 'text.primary',
-          },
-        }}
-      >
-        Déconnexion
-      </Button>
+        <Avatar
+          sx={{
+            width: 26,
+            height: 26,
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            bgcolor: estSombre ? 'rgba(255,255,255,0.9)' : 'grey.900',
+            color: estSombre ? '#121212' : '#FFFFFF',
+          }}
+        >
+          {initiale}
+        </Avatar>
+        <Typography
+          sx={{
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            color: estSombre ? 'rgba(255,255,255,0.9)' : 'text.primary',
+          }}
+        >
+          {utilisateur.nomUtilisateur}
+        </Typography>
+      </Stack>
+
+      <Tooltip title="Déconnexion">
+        <IconButton
+          size="small"
+          onClick={gererDeconnexion}
+          sx={{
+            color: estSombre ? 'rgba(255,255,255,0.6)' : 'text.secondary',
+            '&:hover': {
+              bgcolor: estSombre ? 'rgba(255,255,255,0.1)' : 'grey.100',
+              color: estSombre ? '#FFFFFF' : 'text.primary',
+            },
+          }}
+        >
+          <LogoutOutlinedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
     </Stack>
   );
 }
