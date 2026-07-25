@@ -1,5 +1,5 @@
 // src/components/layout/Sidebar.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box, TextField, InputAdornment, List, Button, Stack, Typography, Skeleton, IconButton,
 } from '@mui/material';
@@ -25,6 +25,7 @@ function Sidebar() {
   const [sousMenusParMenu, setSousMenusParMenu] = useState({});
   const [menusOuverts, setMenusOuverts] = useState({});
   const [recherche, setRecherche] = useState('');
+  const boutonNouveauMenuRef = useRef(null);
 
   const [dialogMenuOuvert, setDialogMenuOuvert] = useState(false);
   const [menuEnEdition, setMenuEnEdition] = useState(null);
@@ -134,12 +135,17 @@ function Sidebar() {
     setDialogMenuOuvert(false);
     chargerMenus(recherche);
     enqueueSnackbar(menuEnEdition ? 'Menu mis à jour' : 'Menu créé', { variant: 'success' });
+    // Le Dialog MUI restaure le focus sur le bouton déclencheur APRÈS sa fermeture ;
+    // un blur() immédiat serait donc écrasé. On le déclenche après coup (setTimeout 0),
+    // une fois que cette restauration de focus a eu lieu.
+    setTimeout(() => boutonNouveauMenuRef.current?.blur(), 0);
   };
 
   const apresSauvegardeSousMenu = () => {
     setDialogSousMenuOuvert(false);
     chargerSousMenus(menuParentPourAjout);
     enqueueSnackbar(sousMenuEnEdition ? 'Sous-menu mis à jour' : 'Sous-menu créé', { variant: 'success' });
+    setTimeout(() => document.activeElement?.blur(), 0);
   };
 
   return (
@@ -182,6 +188,8 @@ function Sidebar() {
         placeholder="Rechercher un menu…"
         value={recherche}
         onChange={(e) => setRecherche(e.target.value)}
+        name="recherche-menus"
+        autoComplete="off"
         slotProps={{
           input: {
             startAdornment: (
@@ -199,6 +207,7 @@ function Sidebar() {
         variant="contained"
         fullWidth
         onClick={ouvrirCreationMenu}
+        ref={boutonNouveauMenuRef}
         sx={{
           mb: 2,
           bgcolor: 'rgba(255,255,255,0.1)',

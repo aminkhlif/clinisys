@@ -1,23 +1,11 @@
 // src/pages/LoginPage.jsx
 import { useState } from 'react';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
-import { Box, Paper, Typography, TextField, Button, Link, Stack } from '@mui/material';
+import { Box, Paper, Typography, TextField, Button, Link, Stack, IconButton, InputAdornment } from '@mui/material';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { useAuth } from '../context/AuthContext.jsx';
-
-const TRIANGLE_PATTERN_SVG = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
-    <rect width="120" height="120" fill="#0A0A0A" />
-    <polygon points="0,0 60,0 0,60" fill="#161616" />
-    <polygon points="60,0 120,0 120,60 60,60" fill="#101010" />
-    <polygon points="0,60 60,60 0,120" fill="#121212" />
-    <polygon points="60,60 120,60 120,120 60,120" fill="#181818" />
-    <polygon points="60,0 60,60 0,60" fill="#0D0D0D" />
-    <polygon points="120,0 120,60 60,60" fill="#141414" />
-    <polygon points="60,60 60,120 0,120" fill="#0F0F0F" />
-    <polygon points="120,60 120,120 60,120" fill="#131313" />
-  </svg>
-`;
-const TRIANGLE_PATTERN_URL = `url("data:image/svg+xml,${encodeURIComponent(TRIANGLE_PATTERN_SVG)}")`;
+import { dotGridBackgroundDarkSx } from '../theme/backgrounds.js';
 
 function LoginPage() {
   const { connecter } = useAuth();
@@ -26,6 +14,7 @@ function LoginPage() {
 
   const [nomUtilisateur, setNomUtilisateur] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
+  const [motDePasseVisible, setMotDePasseVisible] = useState(false);
   const [erreur, setErreur] = useState('');
   const [enCours, setEnCours] = useState(false);
 
@@ -56,8 +45,9 @@ function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundImage: TRIANGLE_PATTERN_URL,
-        backgroundSize: '120px 120px',
+        backgroundImage: dotGridBackgroundDarkSx.backgroundImage,
+        backgroundSize: dotGridBackgroundDarkSx.backgroundSize,
+        backgroundPosition: dotGridBackgroundDarkSx.backgroundPosition,
         backgroundColor: '#0A0A0A',
         p: 2,
       }}
@@ -96,17 +86,35 @@ function LoginPage() {
               label="Nom d'utilisateur"
               value={nomUtilisateur}
               onChange={(e) => setNomUtilisateur(e.target.value)}
+              autoComplete="username"
               autoFocus
               fullWidth
             />
             <TextField
               label="Mot de passe"
-              type="password"
+              type={motDePasseVisible ? 'text' : 'password'}
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}
+              autoComplete="current-password"
               error={Boolean(erreur)}
               helperText={erreur}
               fullWidth
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setMotDePasseVisible((v) => !v)}
+                        edge="end"
+                        tabIndex={-1}
+                      >
+                        {motDePasseVisible ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
             <Button type="submit" variant="contained" fullWidth disabled={enCours} sx={{ py: 1.2 }}>
               {enCours ? 'Connexion…' : 'Se connecter'}

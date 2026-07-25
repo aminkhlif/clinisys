@@ -101,6 +101,9 @@ const theme = createTheme({
             transform: 'translateY(-1px)',
           },
           '&:active': { transform: 'translateY(0)' },
+          '&.Mui-focusVisible': {
+            boxShadow: `inset 0 0 0 2px ${grey[500]}`,
+          },
           '&.Mui-disabled': { backgroundColor: grey[100], color: grey[300] },
         },
         outlined: {

@@ -37,7 +37,7 @@ function ImageEditPage() {
   const { enqueueSnackbar } = useSnackbar();
 
   const [image, setImage] = useState(null);
-  const [chargementImage, setChargementImage] = useState(true);
+  const [premierChargement, setPremierChargement] = useState(true);
   const [nomSousMenu, setNomSousMenu] = useState('');
   const [description, setDescription] = useState('');
   const [nouveauFichier, setNouveauFichier] = useState(null);
@@ -49,7 +49,6 @@ function ImageEditPage() {
   const [actionSelectionneeId, setActionSelectionneeId] = useState(null);
 
   const chargerImage = async () => {
-    setChargementImage(true);
     try {
       const res = await axiosClient.get(`/images/${imageId}`);
       setImage(res.data);
@@ -58,7 +57,7 @@ function ImageEditPage() {
       enqueueSnackbar("Impossible de charger l'image", { variant: 'error' });
       retourAuSousMenu();
     } finally {
-      setChargementImage(false);
+      setPremierChargement(false);
     }
   };
 
@@ -87,7 +86,7 @@ function ImageEditPage() {
     navigate(`/modules/${moduleId}/sous-menus/${sousMenuId}`);
   };
 
-  if (chargementImage || !image) {
+  if (premierChargement || !image) {
     return (
       <Box sx={{ p: 4 }}>
         <Skeleton variant="rounded" height={48} width={300} sx={{ mb: 3 }} />
@@ -187,7 +186,12 @@ function ImageEditPage() {
       }
 
       enqueueSnackbar('Modifications enregistrées', { variant: 'success' });
-      retourAuSousMenu();
+      setNouveauFichier(null);
+      setActionSelectionneeId(null);
+      // On reste sur la page : on recharge juste l'image et ses actions pour refléter
+      // l'état sauvegardé (annotations validées et appliquées, éventuel nouveau fichier).
+      await chargerImage();
+      await chargerActions();
     } catch (err) {
       setErreur(err.response?.data?.description || 'Une erreur est survenue');
     } finally {
