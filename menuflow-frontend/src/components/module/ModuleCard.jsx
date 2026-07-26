@@ -1,105 +1,226 @@
 // src/components/module/ModuleCard.jsx
-import { Card, CardActionArea, Box, Typography, IconButton, Stack, Chip } from '@mui/material';
+import { Card, CardActionArea, Box, Typography, IconButton, Stack, Chip, Tooltip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import WidgetsOutlinedIcon from '@mui/icons-material/WidgetsOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+
+/**
+ * Renvoie une couleur d'accentuation selon le nombre de menus.
+ * Plus un module a de menus, plus il est "vivant" → teinte plus chaude/contrastée.
+ */
+function getAccentPalette(nombreMenus) {
+  if (!nombreMenus) return { bg: '#F2F2F2', fg: '#C4C4C4', label: 'Vide' };
+  if (nombreMenus <= 3) return { bg: '#121212', fg: '#9E9E9E', label: `${nombreMenus} menu${nombreMenus > 1 ? 's' : ''}` };
+  if (nombreMenus <= 7) return { bg: '#1A1A1A', fg: '#787878', label: `${nombreMenus} menus` };
+  return { bg: '#0A0A0A', fg: '#565656', label: `${nombreMenus} menus` };
+}
+
+/**
+ * Formate une date ISO en relatif ("il y a 3 jours", "hier", etc.)
+ */
+function formatRelativeDate(isoString) {
+  if (!isoString) return null;
+  const now = new Date();
+  const date = new Date(isoString);
+  const diffMs = now - date;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const diffD = Math.floor(diffH / 24);
+
+  if (diffMin < 1) return "à l'instant";
+  if (diffMin < 60) return `il y a ${diffMin} min`;
+  if (diffH < 24) return `il y a ${diffH}h`;
+  if (diffD < 7) return `il y a ${diffD}j`;
+  if (diffD < 30) return `il y a ${Math.floor(diffD / 7)} sem`;
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
 
 function ModuleCard({ module, onOuvrir, onEdit, onDelete, misEnAvant = false }) {
   const estVide = module.nombreMenus === 0;
+  const palette = getAccentPalette(module.nombreMenus);
+
+  // Animation d'entrée pour les cartes nouvellement créées/modifiées
+  const pulseStyle = misEnAvant
+    ? {
+        animation: 'cardPulse 1.8s ease-out',
+        borderColor: '#121212',
+        boxShadow: '0 0 0 3px rgba(18,18,18,0.12)',
+        '@keyframes cardPulse': {
+          '0%': { boxShadow: '0 0 0 0 rgba(18,18,18,0.25)' },
+          '70%': { boxShadow: '0 0 0 8px rgba(18,18,18,0)' },
+          '100%': { boxShadow: 'none' },
+        },
+      }
+    : {};
+
+  const updatedAtLabel = formatRelativeDate(module.updatedAt || module.creerAu);
 
   return (
     <Card
       sx={{
         position: 'relative',
-        height: 148,
+        height: 160,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
-        ...(misEnAvant && {
-          borderColor: 'grey.900',
-          boxShadow: '0 0 0 3px rgba(18,18,18,0.08)',
-        }),
+        transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease',
+        ...pulseStyle,
         '&:hover': {
           borderColor: 'grey.400',
-          transform: 'translateY(-2px)',
-          boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+          transform: 'translateY(-3px)',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
         },
         '&:hover .fleche': { opacity: 1, transform: 'translateX(0)' },
         '& .row-actions': { opacity: 0 },
         '&:hover .row-actions': { opacity: 1 },
       }}
     >
-      <CardActionArea onClick={onOuvrir} sx={{ p: 2.25, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+      <CardActionArea
+        onClick={onOuvrir}
+        sx={{
+          p: 2.5,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+        }}
+        aria-label={`Ouvrir le module ${module.nom}`}
+      >
         <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
-          <Box
-            sx={{
-              width: 38,
-              height: 38,
-              borderRadius: 2,
-              bgcolor: estVide ? 'grey.300' : 'grey.900',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <WidgetsOutlinedIcon sx={{ color: '#FFFFFF', fontSize: 19 }} />
-          </Box>
+          <Tooltip title={estVide ? 'Aucun menu' : `${module.nombreMenus} menu${module.nombreMenus > 1 ? 's' : ''} configuré${module.nombreMenus > 1 ? 's' : ''}`}>
+            <Box
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: 2.5,
+                bgcolor: palette.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'transform 200ms ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                },
+              }}
+            >
+              <WidgetsOutlinedIcon sx={{ color: '#FFFFFF', fontSize: 20 }} />
+            </Box>
+          </Tooltip>
           <ChevronRightIcon
             className="fleche"
-            sx={{ color: 'grey.400', opacity: 0, transform: 'translateX(-4px)', transition: 'all 160ms ease' }}
+            sx={{
+              color: 'grey.400',
+              opacity: 0,
+              transform: 'translateX(-4px)',
+              transition: 'all 200ms ease',
+            }}
           />
         </Stack>
 
-        <Box sx={{ flex: 1, minHeight: 0, mt: 1.25, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Box sx={{ flex: 1, minHeight: 0, mt: 1.5, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <Typography
             variant="subtitle1"
             title={module.nom}
             sx={{
-              mb: 0.5,
+              mb: 0.75,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               color: estVide ? 'text.secondary' : 'text.primary',
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
             }}
           >
             {module.nom}
           </Typography>
+
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {module.nombreMenus != null ? `${module.nombreMenus} menu${module.nombreMenus > 1 ? 's' : ''}` : 'Voir les menus'}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <LayersOutlinedIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: estVide ? 'text.secondary' : 'text.primary',
+                  fontWeight: 500,
+                  fontSize: '0.78rem',
+                }}
+              >
+                {palette.label}
+              </Typography>
+            </Stack>
+
             {estVide && (
               <Chip
                 size="small"
                 label="Vide"
-                sx={{ height: 18, fontSize: '0.65rem', bgcolor: 'grey.100', color: 'text.secondary' }}
+                variant="outlined"
+                sx={{ height: 18, fontSize: '0.6rem', borderColor: 'grey.300', color: 'text.secondary' }}
               />
             )}
           </Stack>
+
+          {/* Timestamp de dernière modification */}
+          {updatedAtLabel && (
+            <Stack direction="row" alignItems="center" spacing={0.4} sx={{ mt: 0.75 }}>
+              <AccessTimeIcon sx={{ fontSize: 11, color: 'text.disabled' }} />
+              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.68rem' }}>
+                Modifié {updatedAtLabel}
+              </Typography>
+            </Stack>
+          )}
         </Box>
       </CardActionArea>
 
+      {/* Actions contextuelles — visibles au hover */}
       <Stack
         direction="row"
         className="row-actions"
-        sx={{ position: 'absolute', top: 8, right: 8, transition: 'opacity 140ms ease' }}
+        sx={{ position: 'absolute', top: 10, right: 10, transition: 'opacity 160ms ease' }}
+        spacing={0.5}
       >
-        <IconButton
-          size="small"
-          onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
-        >
-          <EditIcon fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', ml: 0.5 }}
-        >
-          <DeleteIcon fontSize="small" />
-        </IconButton>
+        <Tooltip title="Modifier le module">
+          <IconButton
+            size="small"
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            sx={{
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              '&:hover': {
+                borderColor: 'grey.400',
+                bgcolor: 'grey.50',
+              },
+            }}
+            aria-label="Modifier le module"
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Supprimer le module">
+          <IconButton
+            size="small"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            sx={{
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              color: 'error.main',
+              '&:hover': {
+                borderColor: 'error.main',
+                bgcolor: '#FFF5F5',
+                color: 'error.main',
+              },
+            }}
+            aria-label="Supprimer le module"
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Stack>
     </Card>
   );
