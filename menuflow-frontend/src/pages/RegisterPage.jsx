@@ -2,26 +2,15 @@
 import { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { Box, Paper, Typography, TextField, Button, Link, Stack } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useAuth } from '../context/AuthContext.jsx';
-
-const TRIANGLE_PATTERN_SVG = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
-    <rect width="120" height="120" fill="#0A0A0A" />
-    <polygon points="0,0 60,0 0,60" fill="#161616" />
-    <polygon points="60,0 120,0 120,60 60,60" fill="#101010" />
-    <polygon points="0,60 60,60 0,120" fill="#121212" />
-    <polygon points="60,60 120,60 120,120 60,120" fill="#181818" />
-    <polygon points="60,0 60,60 0,60" fill="#0D0D0D" />
-    <polygon points="120,0 120,60 60,60" fill="#141414" />
-    <polygon points="60,60 60,120 0,120" fill="#0F0F0F" />
-    <polygon points="120,60 120,120 60,120" fill="#131313" />
-  </svg>
-`;
-const TRIANGLE_PATTERN_URL = `url("data:image/svg+xml,${encodeURIComponent(TRIANGLE_PATTERN_SVG)}")`;
+import { dotGridBackgroundSx, dotGridBackgroundDarkSx } from '../theme/backgrounds';
 
 function RegisterPage() {
   const { inscrire } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDark = theme?.palette?.mode === 'dark';
 
   const [nomUtilisateur, setNomUtilisateur] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
@@ -32,21 +21,10 @@ function RegisterPage() {
   const soumettre = async (e) => {
     e.preventDefault();
     const nouvellesErreurs = {};
-
-    if (nomUtilisateur.trim().length < 3) {
-      nouvellesErreurs.nomUtilisateur = 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
-    }
-    if (motDePasse.length < 6) {
-      nouvellesErreurs.motDePasse = 'Le mot de passe doit contenir au moins 6 caractères';
-    }
-    if (confirmationMotDePasse !== motDePasse) {
-      nouvellesErreurs.confirmation = 'Les mots de passe ne correspondent pas';
-    }
-
-    if (Object.keys(nouvellesErreurs).length > 0) {
-      setErreurs(nouvellesErreurs);
-      return;
-    }
+    if (nomUtilisateur.trim().length < 3) nouvellesErreurs.nomUtilisateur = "Le nom d'utilisateur doit contenir au moins 3 caractères";
+    if (motDePasse.length < 6) nouvellesErreurs.motDePasse = 'Le mot de passe doit contenir au moins 6 caractères';
+    if (confirmationMotDePasse !== motDePasse) nouvellesErreurs.confirmation = 'Les mots de passe ne correspondent pas';
+    if (Object.keys(nouvellesErreurs).length > 0) { setErreurs(nouvellesErreurs); return; }
 
     setEnCours(true);
     setErreurs({});
@@ -60,19 +38,29 @@ function RegisterPage() {
     }
   };
 
+  const pageBackground = {
+    ...(!isDark ? dotGridBackgroundSx : dotGridBackgroundDarkSx),
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    p: 2,
+    position: 'relative',
+    // pseudo-élément via sx pour renforcer la "touche black" (ligne fine sous la bande)
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      top: 6,
+      left: 0,
+      width: '100%',
+      height: 1,
+      background: 'rgba(0,0,0,0.06)',
+      pointerEvents: 'none',
+    },
+  };
+
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundImage: TRIANGLE_PATTERN_URL,
-        backgroundSize: '120px 120px',
-        backgroundColor: '#0A0A0A',
-        p: 2,
-      }}
-    >
+    <Box sx={pageBackground}>
       <Paper
         elevation={0}
         sx={{
@@ -82,19 +70,22 @@ function RegisterPage() {
           borderRadius: 3,
           border: '1px solid',
           borderColor: 'divider',
+          backgroundColor: 'background.paper',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <Stack alignItems="center" spacing={1.5} sx={{ mb: 3.5 }}>
-          <Box component="svg" viewBox="0 0 32 32" sx={{ width: 40, height: 40 }}>
-            <rect x="3" y="3" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
-            <rect x="17" y="3" width="12" height="12" rx="3" fill="#121212" opacity="0.55">
-              <animate attributeName="opacity" values="0.35;0.85;0.35" dur="3.2s" repeatCount="indefinite" />
-            </rect>
-            <rect x="3" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.55">
-              <animate attributeName="opacity" values="0.85;0.35;0.85" dur="3.2s" repeatCount="indefinite" />
-            </rect>
-            <rect x="17" y="17" width="12" height="12" rx="3" fill="#121212" opacity="0.95" />
+          {/* Logo 4 carrés noirs (comme sur l'exemple) */}
+          <Box sx={{ width: 40, height: 40 }}>
+            <svg viewBox="0 0 32 32" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="12" height="12" rx="3" fill="#000" />
+              <rect x="17" y="3" width="12" height="12" rx="3" fill="#000" opacity="0.85" />
+              <rect x="3" y="17" width="12" height="12" rx="3" fill="#000" opacity="0.85" />
+              <rect x="17" y="17" width="12" height="12" rx="3" fill="#000" />
+            </svg>
           </Box>
+
           <Typography variant="h5">Créer un compte</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Rejoignez MenuFlow en quelques secondes
@@ -130,7 +121,20 @@ function RegisterPage() {
               helperText={erreurs.confirmation}
               fullWidth
             />
-            <Button type="submit" variant="contained" fullWidth disabled={enCours} sx={{ py: 1.2 }}>
+
+            {/* Bouton noir comme sur l'exemple */}
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              disabled={enCours}
+              sx={{
+                py: 1.2,
+                backgroundColor: '#000',
+                color: '#fff',
+                '&:hover': { backgroundColor: '#111' },
+              }}
+            >
               {enCours ? 'Création…' : 'Créer mon compte'}
             </Button>
           </Stack>

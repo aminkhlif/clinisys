@@ -1,7 +1,8 @@
 // src/components/image/ImageActionsDialog.jsx
 import { useEffect, useState } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Stack, Typography, Grid, Divider, Chip,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Stack, Typography, Grid, Chip,
+  IconButton, Tooltip, CircularProgress, Paper,
 } from '@mui/material';
 import BlurOnOutlinedIcon from '@mui/icons-material/BlurOnOutlined';
 import CropSquareOutlinedIcon from '@mui/icons-material/CropSquareOutlined';
@@ -9,6 +10,10 @@ import CenterFocusWeakOutlinedIcon from '@mui/icons-material/CenterFocusWeakOutl
 import AdsClickOutlinedIcon from '@mui/icons-material/AdsClickOutlined';
 import NearMeOutlinedIcon from '@mui/icons-material/NearMeOutlined';
 import UndoOutlinedIcon from '@mui/icons-material/UndoOutlined';
+import DeleteSweepOutlinedIcon from '@mui/icons-material/DeleteSweepOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import { useSnackbar } from 'notistack';
 import axiosClient from '../../api/axiosClient.js';
 import {
@@ -29,10 +34,19 @@ const ICONE_ACTION = {
 const INTENSITE_FLOU_PAR_DEFAUT = 8;
 const COULEUR_PAR_DEFAUT = '#FF0000';
 
+function formaterTaille(octets) {
+  if (!octets) return '';
+  const ko = octets / 1024;
+  if (ko < 1024) return `${ko.toFixed(0)} Ko`;
+  return `${(ko / 1024).toFixed(1)} Mo`;
+}
+
 function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
   const { enqueueSnackbar } = useSnackbar();
   const [description, setDescription] = useState('');
   const [nouveauFichier, setNouveauFichier] = useState(null);
+  const [apercuNouveauFichier, setApercuNouveauFichier] = useState(null);
+  const [survolFichier, setSurvolFichier] = useState(false);
   const [erreur, setErreur] = useState('');
   const [actions, setActions] = useState([]);
   const [couleurChoisie, setCouleurChoisie] = useState(COULEUR_PAR_DEFAUT);
@@ -51,6 +65,17 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
     }
   }, [image]);
 
+  // Génère et nettoie l'aperçu du nouveau fichier (objectURL révoqué au changement/démontage)
+  useEffect(() => {
+    if (!nouveauFichier) {
+      setApercuNouveauFichier(null);
+      return;
+    }
+    const url = URL.createObjectURL(nouveauFichier);
+    setApercuNouveauFichier(url);
+    return () => URL.revokeObjectURL(url);
+  }, [nouveauFichier]);
+
   const chargerActions = async () => {
     if (!image) return;
     const data = await listerActions(image.id);
@@ -59,9 +84,7 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
 
   if (!image) return null;
 
-  const urlAffichee = nouveauFichier
-    ? URL.createObjectURL(nouveauFichier)
-    : `data:${image.typeContenu};base64,${image.donneesBase64}`;
+  const urlAffichee = apercuNouveauFichier || `data:${image.typeContenu};base64,${image.donneesBase64}`;
 
   const typeNecessiteCouleur = LISTE_ACTIONS.some((t) => CONFIG_ACTIONS[t].couleur);
 
@@ -133,6 +156,18 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
     setActionSelectionneeId(null);
   };
 
+  const choisirFichier = (fichier) => {
+    if (fichier && fichier.type.startsWith('image/')) {
+      setNouveauFichier(fichier);
+    }
+  };
+
+  const retirerNouveauFichier = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setNouveauFichier(null);
+  };
+
   // Un seul bouton "Sauvegarder" : description + fichier + validation des annotations
   const toutSauvegarder = async () => {
     if (!description.trim()) {
@@ -163,124 +198,236 @@ function ImageActionsDialog({ image, onFermer, onSauvegarde }) {
     }
   };
 
+  const fermer = () => {
+    if (enCours) return;
+    onFermer();
+  };
+
   return (
-    <Dialog open={Boolean(image)} onClose={onFermer} fullWidth maxWidth="lg">
-      <DialogTitle>Édition de la capture</DialogTitle>
+    <Dialog
+      open={Boolean(image)}
+      onClose={fermer}
+      fullWidth
+      maxWidth="lg"
+      PaperProps={{ sx: { borderRadius: 3 } }}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+        Édition de la capture
+        <IconButton size="small" onClick={fermer} disabled={enCours} sx={{ ml: 2 }}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </DialogTitle>
       <DialogContent>
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 8 }}>
-            <ImageEditorCanvas
-              urlImage={urlAffichee}
-              actions={actions}
-              onDeplace={deplacerAction}
-              onRedimensionne={redimensionnerAction}
-              onSupprime={supprimerUneAction}
-              actionSelectionneeId={actionSelectionneeId}
-              onSelectionnerAction={setActionSelectionneeId}
-            />
+            <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden', bgcolor: 'grey.50', mb: 2 }}>
+              <ImageEditorCanvas
+                urlImage={urlAffichee}
+                actions={actions}
+                onDeplace={deplacerAction}
+                onRedimensionne={redimensionnerAction}
+                onSupprime={supprimerUneAction}
+                actionSelectionneeId={actionSelectionneeId}
+                onSelectionnerAction={setActionSelectionneeId}
+              />
+            </Paper>
             <TextField
               fullWidth
               multiline
               rows={2}
               label="Description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (erreur) setErreur('');
+              }}
               error={Boolean(erreur)}
               helperText={erreur}
-              sx={{ mt: 2 }}
+              disabled={enCours}
             />
           </Grid>
 
           <Grid size={{ xs: 12, md: 4 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-              <Typography variant="subtitle1">Annotations</Typography>
-              {actions.length > 0 && (
-                <Chip size="small" label={`${actions.length} posée${actions.length > 1 ? 's' : ''}`} />
-              )}
-            </Stack>
+            <Paper variant="outlined" sx={{ borderRadius: 3, p: 2, mb: 2 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle2" fontWeight={600}>Annotations</Typography>
+                {actions.length > 0 && (
+                  <Chip size="small" label={`${actions.length} posée${actions.length > 1 ? 's' : ''}`} sx={{ fontWeight: 600 }} />
+                )}
+              </Stack>
 
-            <Grid container spacing={1} sx={{ mb: 2 }}>
-              {LISTE_ACTIONS.map((type) => {
-                const Icone = ICONE_ACTION[type];
-                return (
-                  <Grid size={6} key={type}>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      startIcon={<Icone fontSize="small" />}
-                      onClick={() => ajouterAction(type)}
+              <Grid container spacing={1} sx={{ mb: typeNecessiteCouleur ? 2 : 0.5 }}>
+                {LISTE_ACTIONS.map((type) => {
+                  const Icone = ICONE_ACTION[type];
+                  const vientEtreAjoute = dernierTypeAjoute === type;
+                  return (
+                    <Grid size={6} key={type}>
+                      <Tooltip title={`Ajouter : ${CONFIG_ACTIONS[type].label}`} arrow placement="top">
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          startIcon={<Icone fontSize="small" />}
+                          onClick={() => ajouterAction(type)}
+                          sx={{
+                            fontSize: '0.75rem',
+                            justifyContent: 'flex-start',
+                            textTransform: 'none',
+                            borderColor: vientEtreAjoute ? 'primary.main' : 'grey.200',
+                            bgcolor: vientEtreAjoute ? 'primary.50' : 'transparent',
+                            transition: 'all 160ms ease',
+                            '&:hover': { borderColor: 'grey.500', bgcolor: 'grey.50' },
+                          }}
+                        >
+                          {CONFIG_ACTIONS[type].label}
+                        </Button>
+                      </Tooltip>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+
+              {typeNecessiteCouleur && (
+                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'grey.50', borderRadius: 2 }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                    {selectionAcceptesCouleur ? 'Couleur de l\'annotation sélectionnée' : 'Couleur de la prochaine annotation'}
+                  </Typography>
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1.5 }}>
+                    <Box
+                      component="input"
+                      type="color"
+                      value={selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
+                      onChange={(e) => changerCouleur(e.target.value)}
                       sx={{
-                        fontSize: '0.75rem',
-                        justifyContent: 'flex-start',
-                        borderColor: dernierTypeAjoute === type ? 'grey.900' : 'grey.200',
-                        bgcolor: dernierTypeAjoute === type ? 'grey.100' : 'transparent',
+                        width: 36, height: 28, border: '1px solid', borderColor: 'divider',
+                        borderRadius: 1, p: 0, cursor: 'pointer', bgcolor: 'transparent',
+                      }}
+                    />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+                      {(selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie).toUpperCase()}
+                    </Typography>
+                  </Stack>
+                </Box>
+              )}
+
+              <Stack direction="row" spacing={1}>
+                <Button
+                  fullWidth
+                  size="small"
+                  color="inherit"
+                  startIcon={<UndoOutlinedIcon fontSize="small" />}
+                  onClick={annulerDerniereAction}
+                  disabled={actions.length === 0}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Dernière
+                </Button>
+                <Button
+                  fullWidth
+                  size="small"
+                  color="inherit"
+                  startIcon={<DeleteSweepOutlinedIcon fontSize="small" />}
+                  onClick={annulerToutesLesActions}
+                  disabled={actions.length === 0}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Tout annuler
+                </Button>
+              </Stack>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ borderRadius: 3, p: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                Remplacer l'image
+              </Typography>
+              <Box
+                component={nouveauFichier ? 'div' : 'label'}
+                onDragOver={(e) => { e.preventDefault(); setSurvolFichier(true); }}
+                onDragLeave={() => setSurvolFichier(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setSurvolFichier(false);
+                  choisirFichier(e.dataTransfer.files?.[0]);
+                }}
+                sx={{
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 0.75,
+                  py: nouveauFichier ? 1.5 : 2.5,
+                  px: 2,
+                  border: '1.5px dashed',
+                  borderColor: survolFichier ? 'primary.main' : 'grey.200',
+                  bgcolor: survolFichier ? 'primary.50' : 'transparent',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  transition: 'all 140ms ease',
+                  overflow: 'hidden',
+                  '&:hover': { borderColor: 'grey.400' },
+                }}
+              >
+                {nouveauFichier ? (
+                  <>
+                    <IconButton
+                      size="small"
+                      onClick={retirerNouveauFichier}
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        bgcolor: 'rgba(0,0,0,0.55)',
+                        color: '#fff',
+                        '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
                       }}
                     >
-                      {CONFIG_ACTIONS[type].label}
-                    </Button>
-                  </Grid>
-                );
-              })}
-            </Grid>
-
-            {typeNecessiteCouleur && (
-              <Box sx={{ mb: 2.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                  {selectionAcceptesCouleur ? 'Couleur de l\'annotation sélectionnée' : 'Couleur de la prochaine annotation'}
-                </Typography>
-                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1.5 }}>
-                  <Box
-                    component="input"
-                    type="color"
-                    value={selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
-                    onChange={(e) => changerCouleur(e.target.value)}
-                    sx={{
-                      width: 36, height: 28, border: '1px solid', borderColor: 'divider',
-                      borderRadius: 1, p: 0, cursor: 'pointer', bgcolor: 'transparent',
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
-                  </Typography>
-                </Stack>
+                      <CloseIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                    {apercuNouveauFichier && (
+                      <Box
+                        component="img"
+                        src={apercuNouveauFichier}
+                        alt="Aperçu"
+                        sx={{ maxHeight: 90, maxWidth: '100%', borderRadius: 1, objectFit: 'contain' }}
+                      />
+                    )}
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <InsertDriveFileOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                      <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+                        {nouveauFichier.name} · {formaterTaille(nouveauFichier.size)}
+                      </Typography>
+                    </Stack>
+                  </>
+                ) : (
+                  <>
+                    <UploadFileOutlinedIcon sx={{ color: 'grey.500', fontSize: 20 }} />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+                      Glissez une image, ou cliquez pour parcourir
+                    </Typography>
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={(e) => choisirFichier(e.target.files[0])}
+                    />
+                  </>
+                )}
               </Box>
-            )}
-
-            <Stack direction="row" spacing={1} sx={{ mb: 2.5 }}>
-              <Button
-                fullWidth
-                size="small"
-                startIcon={<UndoOutlinedIcon fontSize="small" />}
-                onClick={annulerDerniereAction}
-                disabled={actions.length === 0}
-              >
-                Dernière
-              </Button>
-              <Button fullWidth size="small" onClick={annulerToutesLesActions} disabled={actions.length === 0}>
-                Tout annuler
-              </Button>
-            </Stack>
-
-            <Divider sx={{ mb: 2.5 }} />
-
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>Remplacer l'image</Typography>
-            <Button variant="outlined" component="label" fullWidth>
-              {nouveauFichier ? nouveauFichier.name : 'Choisir un fichier'}
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={(e) => setNouveauFichier(e.target.files[0])}
-              />
-            </Button>
+            </Paper>
           </Grid>
         </Grid>
       </DialogContent>
-      <DialogActions>
-        <Button variant="contained" onClick={toutSauvegarder} disabled={enCours}>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={fermer} disabled={enCours} color="inherit">Fermer</Button>
+        <Button
+          variant="contained"
+          onClick={toutSauvegarder}
+          disabled={enCours}
+          startIcon={enCours ? <CircularProgress size={16} color="inherit" /> : null}
+          sx={{ minWidth: 150 }}
+        >
           {enCours ? 'Enregistrement…' : 'Sauvegarder'}
         </Button>
-        <Button onClick={onFermer}>Fermer</Button>
       </DialogActions>
     </Dialog>
   );

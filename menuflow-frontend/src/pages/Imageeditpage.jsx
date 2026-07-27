@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box, AppBar, Toolbar, IconButton, Typography, Button, TextField, Stack, Grid, Divider, Chip,
-  Skeleton, Breadcrumbs, Tooltip,
+  Skeleton, Breadcrumbs, Tooltip, Fade, Paper,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BlurOnOutlinedIcon from '@mui/icons-material/BlurOnOutlined';
@@ -12,9 +12,13 @@ import CenterFocusWeakOutlinedIcon from '@mui/icons-material/CenterFocusWeakOutl
 import AdsClickOutlinedIcon from '@mui/icons-material/AdsClickOutlined';
 import NearMeOutlinedIcon from '@mui/icons-material/NearMeOutlined';
 import UndoOutlinedIcon from '@mui/icons-material/UndoOutlined';
+import DeleteSweepOutlinedIcon from '@mui/icons-material/DeleteSweepOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import CircleIcon from '@mui/icons-material/Circle';
+import CloseIcon from '@mui/icons-material/Close';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useSnackbar } from 'notistack';
 import axiosClient from '../api/axiosClient.js';
 import {
@@ -53,6 +57,7 @@ function ImageEditPage() {
   const [nomSousMenu, setNomSousMenu] = useState('');
   const [description, setDescription] = useState('');
   const [nouveauFichier, setNouveauFichier] = useState(null);
+  const [apercuNouveauFichier, setApercuNouveauFichier] = useState(null);
   const [survolFichier, setSurvolFichier] = useState(false);
   const [erreur, setErreur] = useState('');
   const [actions, setActions] = useState([]);
@@ -61,6 +66,7 @@ function ImageEditPage() {
   const [dernierTypeAjoute, setDernierTypeAjoute] = useState(null);
   const [actionSelectionneeId, setActionSelectionneeId] = useState(null);
   const [dimensionsNaturelles, setDimensionsNaturelles] = useState(null);
+  const [vientDeSauvegarder, setVientDeSauvegarder] = useState(false);
 
   const chargerImage = async () => {
     try {
@@ -102,6 +108,18 @@ function ImageEditPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageId]);
 
+  // Génère et nettoie l'aperçu du nouveau fichier choisi (remplace le data:URL calculé
+  // à chaque rendu par un seul objectURL, révoqué proprement au changement/démontage)
+  useEffect(() => {
+    if (!nouveauFichier) {
+      setApercuNouveauFichier(null);
+      return;
+    }
+    const url = URL.createObjectURL(nouveauFichier);
+    setApercuNouveauFichier(url);
+    return () => URL.revokeObjectURL(url);
+  }, [nouveauFichier]);
+
   // Avertit l'utilisateur avant de quitter/rafraîchir l'onglet s'il y a des changements non enregistrés
   const modificationsNonSauvegardees = useMemo(() => {
     if (!image) return false;
@@ -118,8 +136,31 @@ function ImageEditPage() {
     return () => window.removeEventListener('beforeunload', gererAvantFermeture);
   }, [modificationsNonSauvegardees]);
 
+  // Raccourci clavier Ctrl/Cmd+S pour sauvegarder sans quitter le clavier
+  useEffect(() => {
+    const gererRaccourci = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (!enCours) toutSauvegarder();
+      }
+    };
+    window.addEventListener('keydown', gererRaccourci);
+    return () => window.removeEventListener('keydown', gererRaccourci);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enCours, description, nouveauFichier, actions]);
+
   const retourAuSousMenu = () => {
     navigate(`/modules/${moduleId}/sous-menus/${sousMenuId}`);
+  };
+
+  const demanderFermeture = () => {
+    if (modificationsNonSauvegardees) {
+      const confirme = window.confirm(
+        'Des modifications ne sont pas enregistrées. Voulez-vous vraiment quitter sans les sauvegarder ?'
+      );
+      if (!confirme) return;
+    }
+    retourAuSousMenu();
   };
 
   if (premierChargement || !image) {
@@ -129,10 +170,12 @@ function ImageEditPage() {
         <Box sx={{ maxWidth: 1300, mx: 'auto', p: { xs: 2, sm: 4 } }}>
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 8 }}>
-              <Skeleton variant="rounded" height={420} />
+              <Skeleton variant="rounded" height={420} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="text" width="40%" sx={{ mt: 2 }} />
+              <Skeleton variant="rounded" height={72} sx={{ mt: 1, borderRadius: 2 }} />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
-              <Skeleton variant="rounded" height={280} />
+              <Skeleton variant="rounded" height={280} sx={{ borderRadius: 3 }} />
             </Grid>
           </Grid>
         </Box>
@@ -140,9 +183,7 @@ function ImageEditPage() {
     );
   }
 
-  const urlAffichee = nouveauFichier
-    ? URL.createObjectURL(nouveauFichier)
-    : `data:${image.typeContenu};base64,${image.donneesBase64}`;
+  const urlAffichee = apercuNouveauFichier || `data:${image.typeContenu};base64,${image.donneesBase64}`;
 
   const typeNecessiteCouleur = LISTE_ACTIONS.some((t) => CONFIG_ACTIONS[t].couleur);
   const actionSelectionnee = actions.find((a) => a.id === actionSelectionneeId) || null;
@@ -216,6 +257,12 @@ function ImageEditPage() {
     }
   };
 
+  const retirerNouveauFichier = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setNouveauFichier(null);
+  };
+
   const toutSauvegarder = async () => {
     if (!description.trim()) {
       setErreur('La description est obligatoire');
@@ -239,6 +286,8 @@ function ImageEditPage() {
       enqueueSnackbar('Modifications enregistrées', { variant: 'success' });
       setNouveauFichier(null);
       setActionSelectionneeId(null);
+      setVientDeSauvegarder(true);
+      setTimeout(() => setVientDeSauvegarder(false), 1600);
       await chargerImage();
       await chargerActions();
     } catch (err) {
@@ -250,11 +299,25 @@ function ImageEditPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', ...dotGridBackgroundSx }}>
-      <AppBar position="sticky" sx={{ top: 0 }}>
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          top: 0,
+          bgcolor: 'rgba(255,255,255,0.8)',
+          backdropFilter: 'blur(10px)',
+          color: 'text.primary',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
         <Toolbar sx={{ gap: 1.5 }}>
-          <IconButton onClick={retourAuSousMenu} size="small">
-            <ArrowBackIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title="Retour" arrow>
+            <IconButton onClick={demanderFermeture} size="small">
+              <ArrowBackIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Breadcrumbs
               separator="›"
@@ -276,45 +339,74 @@ function ImageEditPage() {
               )}
             </Breadcrumbs>
             <Stack direction="row" alignItems="center" spacing={0.75}>
-              <Typography variant="subtitle1" noWrap>Édition de la capture</Typography>
-              {modificationsNonSauvegardees && (
-                <Tooltip title="Modifications non enregistrées">
-                  <CircleIcon sx={{ fontSize: 7, color: 'grey.500' }} />
+              <Typography variant="subtitle1" fontWeight={600} noWrap>Édition de la capture</Typography>
+              <Fade in={modificationsNonSauvegardees}>
+                <Tooltip title="Modifications non enregistrées" arrow>
+                  <CircleIcon sx={{ fontSize: 7, color: 'warning.main' }} />
                 </Tooltip>
-              )}
+              </Fade>
+              <Fade in={vientDeSauvegarder}>
+                <Stack direction="row" alignItems="center" spacing={0.4}>
+                  <CheckCircleOutlineIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                  <Typography variant="caption" sx={{ color: 'success.main' }}>Enregistré</Typography>
+                </Stack>
+              </Fade>
             </Stack>
           </Box>
-          <Button onClick={retourAuSousMenu}>Fermer</Button>
-          <Button variant="contained" onClick={toutSauvegarder} disabled={enCours}>
-            {enCours ? 'Enregistrement…' : 'Sauvegarder'}
-          </Button>
+
+          <Button onClick={demanderFermeture} color="inherit" disabled={enCours}>Fermer</Button>
+          <Tooltip title="Ctrl/Cmd + S" arrow>
+            <span>
+              <Button
+                variant="contained"
+                onClick={toutSauvegarder}
+                disabled={enCours || !modificationsNonSauvegardees}
+                sx={{ minWidth: 150 }}
+              >
+                {enCours ? 'Enregistrement…' : 'Sauvegarder'}
+              </Button>
+            </span>
+          </Tooltip>
         </Toolbar>
       </AppBar>
 
       <Box sx={{ maxWidth: 1300, mx: 'auto', p: { xs: 2, sm: 4 } }}>
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 8 }}>
-            <ImageEditorCanvas
-              urlImage={urlAffichee}
-              actions={actions}
-              onDeplace={deplacerAction}
-              onRedimensionne={redimensionnerAction}
-              onSupprime={supprimerUneAction}
-              actionSelectionneeId={actionSelectionneeId}
-              onSelectionnerAction={setActionSelectionneeId}
-              maxHeight="calc(100vh - 320px)"
-              onDimensionsChargees={setDimensionsNaturelles}
-            />
+            <Paper
+              variant="outlined"
+              sx={{ borderRadius: 3, overflow: 'hidden', bgcolor: 'grey.50', mb: 1.5 }}
+            >
+              <ImageEditorCanvas
+                urlImage={urlAffichee}
+                actions={actions}
+                onDeplace={deplacerAction}
+                onRedimensionne={redimensionnerAction}
+                onSupprime={supprimerUneAction}
+                actionSelectionneeId={actionSelectionneeId}
+                onSelectionnerAction={setActionSelectionneeId}
+                maxHeight="calc(100vh - 320px)"
+                onDimensionsChargees={setDimensionsNaturelles}
+              />
+            </Paper>
 
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1, mb: 2 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
               <Stack direction="row" alignItems="center" spacing={0.75}>
                 <ImageOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   {image.nom}
                   {dimensionsNaturelles && ` · ${dimensionsNaturelles.largeur}×${dimensionsNaturelles.hauteur}px`}
-                  {nouveauFichier && ` · ${formaterTaille(nouveauFichier.size)} (nouveau fichier)`}
                 </Typography>
               </Stack>
+              {nouveauFichier && (
+                <Chip
+                  size="small"
+                  icon={<InsertDriveFileOutlinedIcon sx={{ fontSize: 14 }} />}
+                  label={`Nouveau fichier · ${formaterTaille(nouveauFichier.size)}`}
+                  onDelete={(e) => retirerNouveauFichier(e)}
+                  sx={{ fontSize: '0.7rem' }}
+                />
+              )}
             </Stack>
 
             <TextField
@@ -323,127 +415,189 @@ function ImageEditPage() {
               rows={2}
               label="Description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (erreur) setErreur('');
+              }}
               error={Boolean(erreur)}
               helperText={erreur}
+              disabled={enCours}
             />
           </Grid>
 
           <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ position: { md: 'sticky' }, top: { md: 88 } }}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-                <Typography variant="subtitle1">Annotations</Typography>
-                {actions.length > 0 && (
-                  <Chip size="small" label={`${actions.length} posée${actions.length > 1 ? 's' : ''}`} />
-                )}
-              </Stack>
+              <Paper variant="outlined" sx={{ borderRadius: 3, p: 2, mb: 2 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                  <Typography variant="subtitle2" fontWeight={600}>Annotations</Typography>
+                  {actions.length > 0 && (
+                    <Chip
+                      size="small"
+                      label={`${actions.length} posée${actions.length > 1 ? 's' : ''}`}
+                      sx={{ fontWeight: 600 }}
+                    />
+                  )}
+                </Stack>
 
-              <Grid container spacing={1} sx={{ mb: 2 }}>
-                {LISTE_ACTIONS.map((type, index) => {
-                  const Icone = ICONE_ACTION[type];
-                  const dernierEtImpair = index === LISTE_ACTIONS.length - 1 && LISTE_ACTIONS.length % 2 !== 0;
-                  return (
-                    <Grid size={dernierEtImpair ? 12 : 6} key={type}>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        startIcon={<Icone fontSize="small" />}
-                        onClick={() => ajouterAction(type)}
+                <Grid container spacing={1} sx={{ mb: typeNecessiteCouleur ? 2 : 0.5 }}>
+                  {LISTE_ACTIONS.map((type, index) => {
+                    const Icone = ICONE_ACTION[type];
+                    const dernierEtImpair = index === LISTE_ACTIONS.length - 1 && LISTE_ACTIONS.length % 2 !== 0;
+                    const vientEtreAjoute = dernierTypeAjoute === type;
+                    return (
+                      <Grid size={dernierEtImpair ? 12 : 6} key={type}>
+                        <Tooltip title={`Ajouter : ${CONFIG_ACTIONS[type].label}`} arrow placement="top">
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            startIcon={<Icone fontSize="small" />}
+                            onClick={() => ajouterAction(type)}
+                            sx={{
+                              fontSize: '0.75rem',
+                              justifyContent: 'flex-start',
+                              textTransform: 'none',
+                              borderColor: vientEtreAjoute ? 'primary.main' : 'grey.200',
+                              bgcolor: vientEtreAjoute ? 'primary.50' : 'transparent',
+                              transition: 'all 160ms ease',
+                              '&:hover': { borderColor: 'grey.500', bgcolor: 'grey.50' },
+                            }}
+                          >
+                            {CONFIG_ACTIONS[type].label}
+                          </Button>
+                        </Tooltip>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+
+                {typeNecessiteCouleur && (
+                  <Box sx={{ mb: 2, p: 1.5, bgcolor: 'grey.50', borderRadius: 2 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                      {selectionAcceptesCouleur ? "Couleur de l'annotation sélectionnée" : 'Couleur de la prochaine annotation'}
+                    </Typography>
+                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1.5 }}>
+                      <Box
+                        component="input"
+                        type="color"
+                        value={selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
+                        onChange={(e) => changerCouleur(e.target.value)}
                         sx={{
-                          fontSize: '0.75rem',
-                          justifyContent: 'flex-start',
-                          borderColor: dernierTypeAjoute === type ? 'grey.900' : 'grey.200',
-                          bgcolor: dernierTypeAjoute === type ? 'grey.100' : 'transparent',
+                          width: 36, height: 28, border: '1px solid', borderColor: 'divider',
+                          borderRadius: 1, p: 0, cursor: 'pointer', bgcolor: 'transparent',
+                        }}
+                      />
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+                        {(selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie).toUpperCase()}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                )}
+
+                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                  <Button
+                    fullWidth
+                    size="small"
+                    color="inherit"
+                    startIcon={<UndoOutlinedIcon fontSize="small" />}
+                    onClick={annulerDerniereAction}
+                    disabled={actions.length === 0}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Dernière
+                  </Button>
+                  <Button
+                    fullWidth
+                    size="small"
+                    color="inherit"
+                    startIcon={<DeleteSweepOutlinedIcon fontSize="small" />}
+                    onClick={annulerToutesLesActions}
+                    disabled={actions.length === 0}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Tout annuler
+                  </Button>
+                </Stack>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                  Sélectionnez une annotation, puis <b>Suppr</b> pour l'effacer ou <b>Échap</b> pour désélectionner.
+                </Typography>
+              </Paper>
+
+              <Paper variant="outlined" sx={{ borderRadius: 3, p: 2 }}>
+                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                  Remplacer l'image
+                </Typography>
+                <Box
+                  component={nouveauFichier ? 'div' : 'label'}
+                  onDragOver={(e) => { e.preventDefault(); setSurvolFichier(true); }}
+                  onDragLeave={() => setSurvolFichier(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setSurvolFichier(false);
+                    choisirFichier(e.dataTransfer.files?.[0]);
+                  }}
+                  sx={{
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 0.75,
+                    py: nouveauFichier ? 1.5 : 2.5,
+                    px: 2,
+                    border: '1.5px dashed',
+                    borderColor: survolFichier ? 'primary.main' : 'grey.200',
+                    bgcolor: survolFichier ? 'primary.50' : 'transparent',
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                    transition: 'all 140ms ease',
+                    overflow: 'hidden',
+                    '&:hover': { borderColor: 'grey.400' },
+                  }}
+                >
+                  {nouveauFichier ? (
+                    <>
+                      <IconButton
+                        size="small"
+                        onClick={retirerNouveauFichier}
+                        sx={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          bgcolor: 'rgba(0,0,0,0.55)',
+                          color: '#fff',
+                          '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
                         }}
                       >
-                        {CONFIG_ACTIONS[type].label}
-                      </Button>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-
-              {typeNecessiteCouleur && (
-                <Box sx={{ mb: 2.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                    {selectionAcceptesCouleur ? 'Couleur de l\'annotation sélectionnée' : 'Couleur de la prochaine annotation'}
-                  </Typography>
-                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1.5 }}>
-                    <Box
-                      component="input"
-                      type="color"
-                      value={selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
-                      onChange={(e) => changerCouleur(e.target.value)}
-                      sx={{
-                        width: 36, height: 28, border: '1px solid', borderColor: 'divider',
-                        borderRadius: 1, p: 0, cursor: 'pointer', bgcolor: 'transparent',
-                      }}
-                    />
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      {selectionAcceptesCouleur ? (actionSelectionnee.couleur || COULEUR_PAR_DEFAUT) : couleurChoisie}
-                    </Typography>
-                  </Stack>
+                        <CloseIcon sx={{ fontSize: 14 }} />
+                      </IconButton>
+                      {apercuNouveauFichier && (
+                        <Box
+                          component="img"
+                          src={apercuNouveauFichier}
+                          alt="Aperçu"
+                          sx={{ maxHeight: 90, maxWidth: '100%', borderRadius: 1, objectFit: 'contain' }}
+                        />
+                      )}
+                      <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+                        {nouveauFichier.name} · {formaterTaille(nouveauFichier.size)}
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <UploadFileOutlinedIcon sx={{ color: 'grey.500', fontSize: 20 }} />
+                      <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+                        Glissez une image, ou cliquez pour parcourir
+                      </Typography>
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={(e) => choisirFichier(e.target.files[0])}
+                      />
+                    </>
+                  )}
                 </Box>
-              )}
-
-              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                <Button
-                  fullWidth
-                  size="small"
-                  startIcon={<UndoOutlinedIcon fontSize="small" />}
-                  onClick={annulerDerniereAction}
-                  disabled={actions.length === 0}
-                >
-                  Dernière
-                </Button>
-                <Button fullWidth size="small" onClick={annulerToutesLesActions} disabled={actions.length === 0}>
-                  Tout annuler
-                </Button>
-              </Stack>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2.5 }}>
-                Astuce : sélectionnez une annotation puis <b>Suppr</b> pour l'effacer, <b>Échap</b> pour désélectionner.
-              </Typography>
-
-              <Divider sx={{ mb: 2.5 }} />
-
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>Remplacer l'image</Typography>
-              <Box
-                component="label"
-                onDragOver={(e) => { e.preventDefault(); setSurvolFichier(true); }}
-                onDragLeave={() => setSurvolFichier(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setSurvolFichier(false);
-                  choisirFichier(e.dataTransfer.files?.[0]);
-                }}
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 0.75,
-                  py: 2.5,
-                  px: 2,
-                  border: '1.5px dashed',
-                  borderColor: survolFichier ? 'grey.900' : 'grey.200',
-                  bgcolor: survolFichier ? 'grey.50' : 'transparent',
-                  borderRadius: 2,
-                  cursor: 'pointer',
-                  transition: 'all 140ms ease',
-                  '&:hover': { borderColor: 'grey.400' },
-                }}
-              >
-                <UploadFileOutlinedIcon sx={{ color: 'grey.500', fontSize: 20 }} />
-                <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                  {nouveauFichier ? nouveauFichier.name : 'Glissez une image, ou cliquez pour parcourir'}
-                </Typography>
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={(e) => choisirFichier(e.target.files[0])}
-                />
-              </Box>
+              </Paper>
             </Box>
           </Grid>
         </Grid>

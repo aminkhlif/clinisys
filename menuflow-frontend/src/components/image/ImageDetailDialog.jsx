@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, IconButton, Stack,
+  Tooltip, CircularProgress,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
@@ -49,6 +50,12 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
     }
   };
 
+  const annulerEdition = () => {
+    setDescription(image.description);
+    setErreur('');
+    setModeEdition(false);
+  };
+
   const supprimer = async () => {
     try {
       await axiosClient.delete(`/images/${image.id}`);
@@ -70,16 +77,26 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
 
   return (
     <>
-      <Dialog open={Boolean(image)} onClose={onFermer} fullWidth maxWidth="md">
+      <Dialog
+        open={Boolean(image)}
+        onClose={enCours ? undefined : onFermer}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Détails de la capture
           <Stack direction="row" spacing={0.5}>
-            <IconButton onClick={() => setConfirmationSuppression(true)} size="small" title="Supprimer">
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-            <IconButton onClick={onFermer} size="small" title="Fermer">
-              <CloseIcon fontSize="small" />
-            </IconButton>
+            <Tooltip title="Supprimer" arrow>
+              <IconButton onClick={() => setConfirmationSuppression(true)} size="small" disabled={enCours}>
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Fermer" arrow>
+              <IconButton onClick={onFermer} size="small" disabled={enCours}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Stack>
         </DialogTitle>
         <DialogContent>
@@ -116,28 +133,45 @@ function ImageDetailDialog({ image, onFermer, onModifie, onOuvrirActions }) {
               label="Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              disabled={!modeEdition}
+              disabled={!modeEdition || enCours}
               error={Boolean(erreur)}
               helperText={erreur}
+              autoFocus={modeEdition}
+              onKeyDown={(e) => e.key === 'Escape' && annulerEdition()}
               sx={{ '& textarea': { resize: 'none' } }}
             />
             {!modeEdition && (
-              <IconButton onClick={() => setModeEdition(true)} sx={{ mt: 0.5 }} title="Modifier la description">
-                <EditOutlinedIcon fontSize="small" />
-              </IconButton>
+              <Tooltip title="Modifier la description" arrow>
+                <IconButton onClick={() => setModeEdition(true)} sx={{ mt: 0.5 }}>
+                  <EditOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             )}
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button startIcon={<DownloadOutlinedIcon />} onClick={telecharger}>Télécharger</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button startIcon={<DownloadOutlinedIcon />} onClick={telecharger} disabled={enCours}>
+            Télécharger
+          </Button>
           <Box sx={{ flex: 1 }} />
-          <Button onClick={onFermer}>Fermer</Button>
           {modeEdition ? (
-            <Button variant="contained" onClick={sauvegarderDescription} disabled={enCours}>
-              {enCours ? 'Enregistrement…' : 'Enregistrer'}
-            </Button>
+            <>
+              <Button onClick={annulerEdition} disabled={enCours} color="inherit">Annuler</Button>
+              <Button
+                variant="contained"
+                onClick={sauvegarderDescription}
+                disabled={enCours}
+                startIcon={enCours ? <CircularProgress size={16} color="inherit" /> : null}
+                sx={{ minWidth: 140 }}
+              >
+                {enCours ? 'Enregistrement…' : 'Enregistrer'}
+              </Button>
+            </>
           ) : (
-            <Button variant="contained" onClick={() => onOuvrirActions(image)}>Modifier</Button>
+            <>
+              <Button onClick={onFermer} color="inherit">Fermer</Button>
+              <Button variant="contained" onClick={() => onOuvrirActions(image)}>Modifier</Button>
+            </>
           )}
         </DialogActions>
       </Dialog>

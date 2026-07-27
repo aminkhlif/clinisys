@@ -1,6 +1,16 @@
 // src/components/sousMenu/SousMenuFormDialog.jsx
 import { useEffect, useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  IconButton,
+  CircularProgress,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import axiosClient from '../../api/axiosClient.js';
 
 function SousMenuFormDialog({ ouvert, sousMenu, menuId, onFermer, onSauvegarde }) {
@@ -34,9 +44,21 @@ function SousMenuFormDialog({ ouvert, sousMenu, menuId, onFermer, onSauvegarde }
   };
 
   return (
-    <Dialog open={ouvert} onClose={onFermer} fullWidth maxWidth="xs">
-      <DialogTitle>{sousMenu ? 'Modifier le sous-menu' : 'Nouveau sous-menu'}</DialogTitle>
-      <DialogContent>
+    <Dialog
+      open={ouvert}
+      onClose={enCours ? undefined : onFermer}
+      fullWidth
+      maxWidth="xs"
+      PaperProps={{ sx: { borderRadius: 3, p: 0.5 } }}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+        {sousMenu ? 'Modifier le sous-menu' : 'Nouveau sous-menu'}
+        <IconButton size="small" onClick={onFermer} disabled={enCours} sx={{ ml: 2 }}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ pt: 1 }}>
         <TextField
           autoFocus
           fullWidth
@@ -47,11 +69,21 @@ function SousMenuFormDialog({ ouvert, sousMenu, menuId, onFermer, onSauvegarde }
           onKeyDown={(e) => e.key === 'Enter' && sauvegarder()}
           error={Boolean(erreur)}
           helperText={erreur}
+          disabled={enCours}
         />
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onFermer} disabled={enCours}>Annuler</Button>
-        <Button variant="contained" onClick={sauvegarder} disabled={enCours}>
+
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onFermer} disabled={enCours} color="inherit">
+          Annuler
+        </Button>
+        <Button
+          variant="contained"
+          onClick={sauvegarder}
+          disabled={enCours}
+          startIcon={enCours ? <CircularProgress size={16} color="inherit" /> : null}
+          sx={{ minWidth: 140 }}
+        >
           {enCours ? 'Enregistrement…' : 'Enregistrer'}
         </Button>
       </DialogActions>

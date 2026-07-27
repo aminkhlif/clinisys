@@ -1,6 +1,6 @@
 // src/components/image/ActionOverlay.jsx
 import { useRef, useState } from 'react';
-import { Box, IconButton } from '@mui/material';
+import { Box, IconButton, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { CONFIG_ACTIONS } from './configActions.js';
 
@@ -11,6 +11,7 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
   const config = CONFIG_ACTIONS[action.type];
   // "enMouvement" ne devient vrai qu'après un vrai déplacement (pas sur un simple clic de sélection)
   const [enMouvement, setEnMouvement] = useState(false);
+  const [survolee, setSurvolee] = useState(false);
 
   const gererDebutDrag = (e) => {
     e.stopPropagation();
@@ -113,6 +114,8 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
     <Box
       ref={dragRef}
       onMouseDown={gererDebutDrag}
+      onMouseEnter={() => setSurvolee(true)}
+      onMouseLeave={() => setSurvolee(false)}
       sx={{
         position: 'absolute',
         left: action.x * echelle,
@@ -135,6 +138,14 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
         alignItems: 'center',
         justifyContent: 'center',
         willChange: 'left, top, width, height',
+        boxShadow: selectionnee
+          ? '0 0 0 4px rgba(18,18,18,0.08)'
+          : survolee
+            ? '0 0 0 3px rgba(18,18,18,0.05)'
+            : 'none',
+        // La transition ne s'applique jamais pendant un drag/resize (sinon effet de "retard"
+        // visible au relâchement) ; elle n'anime que le survol/la sélection au repos.
+        transition: enMouvement ? 'none' : 'box-shadow 120ms ease, border-color 120ms ease',
       }}
     >
       {estCurseur && (
@@ -144,29 +155,34 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
             height: '60%',
             backgroundColor: couleurFond,
             clipPath: 'polygon(0 0, 0 80%, 30% 60%, 45% 100%, 65% 90%, 45% 55%, 80% 55%)',
+            filter: selectionnee || survolee ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))' : 'none',
           }}
         />
       )}
 
       {selectionnee && (
         <>
-          <IconButton
-            size="small"
-            onClick={(e) => { e.stopPropagation(); onSupprime(action.id); }}
-            sx={{
-              position: 'absolute',
-              top: -16,
-              right: -16,
-              bgcolor: '#FFFFFF',
-              border: '1px solid',
-              borderColor: 'divider',
-              width: 24,
-              height: 24,
-              '&:hover': { bgcolor: 'grey.100' },
-            }}
-          >
-            <CloseIcon sx={{ fontSize: 14, color: 'grey.900' }} />
-          </IconButton>
+          <Tooltip title="Supprimer" arrow>
+            <IconButton
+              size="small"
+              onClick={(e) => { e.stopPropagation(); onSupprime(action.id); }}
+              sx={{
+                position: 'absolute',
+                top: -16,
+                right: -16,
+                bgcolor: '#FFFFFF',
+                border: '1px solid',
+                borderColor: 'divider',
+                width: 24,
+                height: 24,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                transition: 'background-color 120ms ease, transform 120ms ease',
+                '&:hover': { bgcolor: '#fee2e2', transform: 'scale(1.08)' },
+              }}
+            >
+              <CloseIcon sx={{ fontSize: 14, color: 'grey.900' }} />
+            </IconButton>
+          </Tooltip>
           <Box
             onMouseDown={gererDebutResize}
             sx={{
@@ -179,6 +195,9 @@ function ActionOverlay({ action, echelle, limites, selectionnee, onSelect, onDep
               border: '2px solid white',
               borderRadius: '50%',
               cursor: 'nwse-resize',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+              transition: 'transform 120ms ease',
+              '&:hover': { transform: 'scale(1.2)' },
             }}
           />
         </>

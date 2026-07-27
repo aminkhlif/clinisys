@@ -5,7 +5,7 @@ import { Box, Paper, Typography, TextField, Button, Link, Stack, IconButton, Inp
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { useAuth } from '../context/AuthContext.jsx';
-import { dotGridBackgroundDarkSx } from '../theme/backgrounds.js';
+import { dotGridBackgroundSx } from '../theme/backgrounds.js'; // <-- fond clair
 
 function LoginPage() {
   const { connecter } = useAuth();
@@ -45,10 +45,14 @@ function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundImage: dotGridBackgroundDarkSx.backgroundImage,
-        backgroundSize: dotGridBackgroundDarkSx.backgroundSize,
-        backgroundPosition: dotGridBackgroundDarkSx.backgroundPosition,
-        backgroundColor: '#0A0A0A',
+
+        // utilise le background clair importé
+        backgroundImage: dotGridBackgroundSx.backgroundImage,
+        backgroundSize: dotGridBackgroundSx.backgroundSize,
+        backgroundPosition: dotGridBackgroundSx.backgroundPosition,
+        backgroundRepeat: dotGridBackgroundSx.backgroundRepeat ?? 'repeat',
+        backgroundColor: dotGridBackgroundSx.backgroundColor ?? '#FFFFFF',
+
         p: 2,
       }}
     >

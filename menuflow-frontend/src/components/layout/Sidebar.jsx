@@ -1,9 +1,10 @@
 // src/components/layout/Sidebar.jsx
 import { useEffect, useRef, useState } from 'react';
 import {
-  Box, TextField, InputAdornment, List, Button, Stack, Typography, Skeleton, IconButton,
+  Box, TextField, InputAdornment, List, Button, Stack, Typography, Skeleton, IconButton, Tooltip, Fade,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -151,14 +152,19 @@ function Sidebar() {
   return (
     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 2, px: 0.5, mb: 1 }}>
-        <IconButton
-          size="small"
-          onClick={() => navigate('/')}
-          title="Retour aux modules"
-          sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.1)' } }}
-        >
-          <ArrowBackIcon fontSize="small" />
-        </IconButton>
+        <Tooltip title="Retour aux modules" arrow>
+          <IconButton
+            size="small"
+            onClick={() => navigate('/')}
+            sx={{
+              color: 'rgba(255,255,255,0.6)',
+              transition: 'color 0.15s, background-color 0.15s',
+              '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.1)' },
+            }}
+          >
+            <ArrowBackIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
         <Box component="svg" viewBox="0 0 32 32" sx={{ width: 26, height: 26 }}>
           <rect x="3" y="3" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.95" />
           <rect x="17" y="3" width="12" height="12" rx="3" fill="#FFFFFF" opacity="0.55">
@@ -179,6 +185,7 @@ function Sidebar() {
             color: 'white',
             borderRadius: 2,
             fontSize: '0.875rem',
+            transition: 'background-color 0.15s',
           },
           '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.12)' },
           '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.24)' },
@@ -197,6 +204,17 @@ function Sidebar() {
                 <SearchIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} />
               </InputAdornment>
             ),
+            endAdornment: recherche ? (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  onClick={() => setRecherche('')}
+                  sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#FFFFFF' } }}
+                >
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
           },
         }}
         fullWidth
@@ -212,13 +230,27 @@ function Sidebar() {
           mb: 2,
           bgcolor: 'rgba(255,255,255,0.1)',
           color: '#FFFFFF',
+          transition: 'background-color 0.15s',
           '&:hover': { bgcolor: 'rgba(255,255,255,0.16)' },
         }}
       >
         Nouveau menu
       </Button>
 
-      <Box sx={{ flex: 1, overflowY: 'auto', mx: -1 }}>
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          mx: -1,
+          '&::-webkit-scrollbar': { width: 6 },
+          '&::-webkit-scrollbar-thumb': {
+            bgcolor: 'rgba(255,255,255,0.15)',
+            borderRadius: 3,
+          },
+          '&::-webkit-scrollbar-thumb:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
+          '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+        }}
+      >
         {chargementMenus ? (
           <Stack spacing={1} sx={{ px: 1 }}>
             {[...Array(4)].map((_, i) => (
@@ -231,11 +263,23 @@ function Sidebar() {
             ))}
           </Stack>
         ) : menus.length === 0 ? (
-          <Box sx={{ px: 2, py: 4, textAlign: 'center' }}>
-            <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
-              {recherche ? 'Aucun menu ne correspond' : 'Aucun menu pour le moment'}
-            </Typography>
-          </Box>
+          <Fade in>
+            <Box sx={{ px: 2, py: 4, textAlign: 'center' }}>
+              <SearchIcon sx={{ fontSize: 28, color: 'rgba(255,255,255,0.15)', mb: 1 }} />
+              <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+                {recherche ? 'Aucun menu ne correspond' : 'Aucun menu pour le moment'}
+              </Typography>
+              {recherche && (
+                <Button
+                  size="small"
+                  onClick={() => setRecherche('')}
+                  sx={{ mt: 1, color: 'rgba(255,255,255,0.5)', textTransform: 'none' }}
+                >
+                  Effacer la recherche
+                </Button>
+              )}
+            </Box>
+          </Fade>
         ) : (
           <List dense sx={{ px: 1 }}>
             {menus.map((menu) => (
